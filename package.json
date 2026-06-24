@@ -1,0 +1,45 @@
+{
+  "name": "bondanalytics",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "better-auth": "^1.6.14",
+    "cors": "^2.8.6",
+    "echarts": "^5.4.3",
+    "express": "^5.2.1",
+    "pg": "^8.21.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "auth-server": "node server.mjs",
+    "start:prod": "node server.mjs",
+    "build": "react-scripts build",
+    "test": "react-scripts test"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ],
+    "rules": {
+      "no-unused-vars": "off",
+      "no-undef": "off",
+      "unicode-bom": "off",
+      "react-hooks/exhaustive-deps": "off"
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

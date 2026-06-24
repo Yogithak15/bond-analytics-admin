@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a2f55" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>BondBulls Analytics</title>
+  <script>
+  (function(){
+    try {
+      var id = localStorage.getItem('bb-color-theme') || 'dark';
+      var themes = {
+        dark:  { mode:'dark',  vars:{'--bg':'#040c1c','--sf':'#08111f','--sf2':'#0c1828','--sf3':'#101f33','--panel':'#030810','--panel2':'#040c1c','--panel3':'#08111f','--tx':'#f0f4ff','--tx2':'#a8c0e0','--tx3':'#6080a8','--tx4':'#3a5070','--bdr':'rgba(255,255,255,.12)','--bdr2':'rgba(255,255,255,.20)'} },
+        light: { mode:'light', vars:{'--bg':'#f0f4fa','--sf':'#ffffff','--sf2':'#edf2f9','--sf3':'#e2eaf6','--panel':'#f0f4fa','--panel2':'#e8eef6','--panel3':'#dce6f0','--tx':'#0a1a30','--tx2':'#1e3a6a','--tx3':'#4a6888','--tx4':'#7898b8','--bdr':'rgba(26,47,85,.09)','--bdr2':'rgba(26,47,85,.16)'} }
+      };
+      var t = themes[id] || themes.dark;
+      var r = document.documentElement;
+      r.setAttribute('data-theme', t.mode);
+      Object.keys(t.vars).forEach(function(k){ r.style.setProperty(k, t.vars[k]); });
+    } catch(e){}
+  })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>

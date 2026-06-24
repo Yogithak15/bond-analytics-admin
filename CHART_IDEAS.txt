@@ -1,0 +1,921 @@
+=============================================================================
+  BOND ANALYTICS — CHART OPPORTUNITIES & CROSS-DATASET COMPARISONS
+  All charts are buildable from existing APIs. No new data sources needed.
+=============================================================================
+
+Last updated: 2026-06-18
+Total suggestions: 52 charts across 9 themes
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THEME 1 — MONETARY POLICY TRANSMISSION
+How RBI rate decisions ripple through every asset class
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#1  The Rate Transmission Dashboard
+───────────────────────────────────
+Datasets   : source 48 (Repo Rate), source 49 (10Y Zero Yield),
+             source 33 dim 34088 (CPI), source 33 dim 34093 (USD/INR)
+Metrics    : Repo Rate %, 10Y Zero %, CPI YoY %, USD/INR spot
+Granularity: Monthly, 2015-present
+Why        : Four variables that define the monetary cycle. When RBI hikes,
+             the 10Y yield should rise within 1-3 months. CPI justifies the
+             hike. USD/INR shows whether hikes are defending the currency or
+             managing inflation. Together they narrate the full policy story.
+Chart type : 4-line multi-axis chart (Repo + 10Y on left %, CPI on
+             secondary %, USD/INR on far right axis)
+Insight    : Identify the exact quarters where monetary transmission worked
+             (10Y tracked Repo) vs where it broke (10Y stayed low despite hikes).
+Difficulty : Medium (4-series dual-axis)
+
+#2  Real Yield = 10Y Zero minus CPI Inflation
+──────────────────────────────────────────────
+Datasets   : source 49 dim 34539 (10Y Zero), source 33 dim 34088 (CPI index)
+Metrics    : 10Y Zero %, CPI YoY % (computed), Real Yield = 10Y - CPI
+Granularity: Monthly
+Why        : When real yield is negative, government bonds lose to inflation in
+             real terms. India had deeply negative real yields 2020-2021
+             (COVID stimulus). This is the single most important value-signal
+             for G-Sec investors.
+Chart type : Dual-line chart -- 10Y Zero (blue) + CPI% (red), area fill for
+             Real Yield (green when positive, red when negative) between them
+Insight    : Shows financial repression vs positive real rate regimes.
+             Current ~2.5% real yield is the highest in a decade.
+Difficulty : Medium (YoY computation + area-between-series)
+
+#3  Repo Rate vs NSE Market Cap -- Policy vs Equity
+────────────────────────────────────────────────────────────────────────
+Datasets   : source 48 (Repo Rate), source 12 dim 33892 (NSE MCap)
+Metrics    : Repo Rate %, NSE MCap (Rs L Cr)
+Granularity: Monthly
+Why        : Equity markets are forward-looking -- they tend to price in rate
+             cuts before they happen and fall ahead of hike cycles. Plotting
+             them together reveals lead/lag relationships and policy credibility.
+Chart type : Dual-axis line -- Repo Rate (left, %) with step interpolation;
+             NSE MCap (right, Rs L Cr) as area chart
+Insight    : The 2022 hike cycle is clearly visible as MCap consolidation.
+             2024-25 cut cycle shows MCap recovery before cuts even start.
+Difficulty : Easy
+
+#4  Repo Rate vs FPI Net Flows -- Foreign Capital & Policy
+──────────────────────────────────────────────────────────
+Datasets   : source 48 (Repo Rate), source 14 dim 33894 (FPI net flows)
+Metrics    : Repo Rate %, FPI Net Flow (Rs Cr monthly)
+Granularity: Monthly
+Why        : Foreign portfolio investors are acutely sensitive to India-US
+             rate differentials. When India hikes and US pauses, FPI inflows
+             surge. When US hikes more than India, outflows dominate.
+Chart type : Dual-axis -- Repo Rate step line (left); FPI flows bar chart
+             (right, green=inflow, red=outflow)
+Insight    : 2022: US aggressive hike -> FPI fled India despite RBI hiking.
+             2024: US cuts -> FPI returned even before RBI cut.
+Difficulty : Easy
+
+#5  Repo Rate vs Corp Bond Outstanding -- Credit Market Response
+────────────────────────────────────────────────────────────────
+Datasets   : source 48 (Repo Rate), source 5 metric 22 (Corp Bond OS)
+Metrics    : Repo Rate %, Corp Bond Outstanding (Rs L Cr)
+Granularity: Monthly
+Why        : High rates increase corporate borrowing costs -> fewer bond
+             issuances -> outstanding stock grows slower. Low rates -> bond
+             issuance boom. This chart shows credit market appetite.
+Chart type : Dual-axis -- Repo Rate (left, step line), Corp Bond OS (right,
+             area line)
+Insight    : Corp bond market acceleration post-2019 rate cuts. Slowdown
+             during 2022 rate hikes clearly visible.
+Difficulty : Easy
+
+#6  SLR + CRR + Repo Rate -- Three Instruments of Monetary Policy
+─────────────────────────────────────────────────────────────────
+Datasets   : source 11 metrics 46 (Repo), 51 (CRR), 52 (SLR)
+Metrics    : Repo Rate %, CRR %, SLR %
+Granularity: Monthly
+Why        : SLR has fallen from 38.5% (1990) to 18% today -- a structural
+             shift that freed up bank capital for lending. CRR is the
+             liquidity fine-tuner. Together with Repo they show how RBI's
+             toolkit has evolved from quantitative to price-based control.
+Chart type : Three-line chart on single axis (all in %)
+Insight    : The long-term decline of SLR + CRR tells the story of Indian
+             financial liberalization over 30 years.
+Difficulty : Easy
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THEME 2 -- SOVEREIGN DEBT MARKET STRUCTURE
+The G-Sec ecosystem: issuance, ownership, and yield
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#7  Sovereign Funding Mix -- G-Sec + SDL + SGB Annual
+─────────────────────────────────────────────────────
+Datasets   : source 8 (G-Sec OS), source 7 (SDL OS), source 6 (SGB OS)
+Metrics    : Outstanding (Rs L Cr) for each, all FY granularity
+Granularity: Annual (FY)
+Why        : Government borrows through three channels. How the mix shifts
+             reveals fiscal strategy -- state govts borrowing more vs Centre,
+             SGB expanding gold monetization.
+Chart type : 100% stacked bar (proportion) + overlay line for total
+Insight    : SDL share rising from ~30% to ~40% of sovereign stock over 10
+             years -- states increasingly self-financing.
+Difficulty : Easy
+
+#8  G-Sec Auction Supply vs 10Y Yield -- Crowding Out Signal
+────────────────────────────────────────────────────────────
+Datasets   : source 52 metric 184 (G-Sec auction supply FY),
+             source 49 dim 34539 (10Y Zero annual avg)
+Metrics    : G-Sec supply (Rs L Cr FY), 10Y Zero Yield %
+Granularity: Annual (FY)
+Why        : Heavy government borrowing (fiscal deficit) pushes yields up --
+             crowding out private investment. Visualizing supply vs yield
+             directly tests whether Indian bond markets price fiscal risk.
+Chart type : Dual-axis bar (supply, left) + line (10Y yield, right)
+Insight    : 2020-21 COVID borrowing surge -> yield jumped despite RBI buying.
+             2024 supply reduction -> yield compression.
+Difficulty : Medium (FY aggregation + join on FY period)
+
+#9  NSE WDM Security Mix -- Trading Composition Over Time
+─────────────────────────────────────────────────────────
+Datasets   : source 54 metric 193 dim_ids 34800-34806 (7 security types)
+Metrics    : Monthly turnover by type: G-Sec, T-Bills, SDL, Corp Bond, etc.
+Granularity: Monthly
+Why        : Secondary market liquidity is concentrated in G-Secs with other
+             instruments barely traded. Tracking composition shows whether the
+             corporate bond secondary market is deepening.
+Chart type : 100% stacked area chart (7 types, monthly)
+Insight    : G-Sec dominates at 80%+ consistently. SDL trading is tiny.
+             Corp bonds slightly improving. T-bills liquid in stress periods.
+Difficulty : Easy
+
+#10 G-Sec + SDL + Corp Bond Outstanding -- Total Debt Stack
+───────────────────────────────────────────────────────────
+Datasets   : source 8 metric 29, source 7 metric 29, source 5 metric 22
+Metrics    : Outstanding (Rs L Cr) all three, monthly
+Granularity: Monthly
+Why        : The three pillars of Indian fixed income. Absolute scale + growth
+             rates reveal market development. G-Sec dominates; Corp Bond
+             slowly catching up.
+Chart type : Grouped bar (annual, 3 bars per FY) + total line overlay
+Insight    : Total fixed income market from Rs 50 L Cr (2014) to Rs 200+ L Cr
+             (2025) -- a 4x expansion in a decade.
+Difficulty : Easy
+
+#11 1Y-10Y Yield Spread vs Repo Rate -- Curve Shape Over Time
+─────────────────────────────────────────────────────────────
+Datasets   : source 49 dim 34521 (1Y Zero), source 49 dim 34539 (10Y Zero),
+             source 48 metric 180 dim 34509 (Repo Rate)
+Metrics    : 1Y Zero %, 10Y Zero %, Spread = 10Y-1Y, Repo Rate %
+Granularity: Monthly
+Why        : When the yield curve flattens or inverts, it signals tight policy
+             and potential slowdown. When it steepens, easy money. The spread
+             vs Repo Rate shows whether market is pricing in future cuts.
+Chart type : Dual-axis -- Spread bar (left, can be negative), Repo Rate line
+             (right), optional 1Y and 10Y as thin background lines
+Insight    : 2022 hike cycle -> spread compressed from 200bps to 50bps.
+             2024 -> spread widening again as market prices cuts.
+Difficulty : Easy (data already in state for key sovereign rates chart)
+
+#12 STRIPS vs G-Sec -- Market Deepening Ratio
+─────────────────────────────────────────────
+Datasets   : source 8 metric 29 (G-Sec FY), source 9 metric 29 (STRIPS FY)
+Metrics    : G-Sec OS, STRIPS OS, STRIPS/G-Sec %
+Granularity: Annual (FY)
+Why        : STRIPS are zero-coupon bonds created by stripping G-Sec
+             coupons -- they require sophisticated institutional market. Their
+             share of G-Sec stock is a financial depth indicator.
+Chart type : Grouped bars (G-Sec + STRIPS) + right-axis line (STRIPS%)
+Insight    : Currently built -- shows STRIPS as ~3-5% of G-Sec stock,
+             growing slowly.
+Difficulty : Easy (already implemented)
+
+#13 FBIL Zero Curve -- Multi-Date Historical Overlay
+────────────────────────────────────────────────────
+Datasets   : source 49 metric 181 dim_ids 34520-34600 (25 tenors)
+Metrics    : Zero yield at each tenor on 4-5 specific dates
+             (e.g. Jan 2020, Mar 2022, Dec 2023, Jun 2025, current)
+Granularity: Daily (pick specific dates)
+Why        : A single yield curve is a snapshot. Overlaying 4-5 curves across
+             a rate cycle shows HOW the entire curve shifted -- parallel shifts
+             (level), twists (slope), and humps (curvature).
+Chart type : Multi-line chart -- each line = one date, X-axis = tenors
+             (6M, 1Y, 2Y, 3Y, 5Y, 7Y, 10Y, 15Y, 20Y, 30Y, 40Y)
+Insight    : 2022 hike: short end rose 250bps, long end only 100bps -> curve
+             flattened dramatically. Can be seen in a single chart.
+Difficulty : Medium (historical fetch per tenor, date alignment)
+
+#14 CCIL ZCYC Beta0 + Beta1 -- Yield Curve Model Pulse
+───────────────────────────────────────────────────────
+Datasets   : source 51 metric 182 dim 34620 (Beta0=level), dim 34621 (Beta1=slope)
+Metrics    : Beta0 (long-run yield level), Beta1 (slope/short-end premium)
+Granularity: Daily -> Monthly avg
+Why        : NSS model parameters summarize the entire yield curve in 2 numbers.
+             Beta0 tracks where long-term rates are heading; Beta1 tracks
+             inversion risk. Currently these are plotted separately -- combining
+             them tells the curve shape story.
+Chart type : Dual-axis line -- Beta0 left axis, Beta1 right axis, vertical
+             bands for rate hike/cut periods
+Insight    : During 2022 hike cycle, Beta1 went negative (inverted curve).
+             Recovery visible as Beta1 turns positive.
+Difficulty : Easy (already fetched separately)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THEME 3 -- EQUITY MARKET DYNAMICS
+Market cap, participation, breadth, and valuation
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#15 NSE Turnover vs NSE MCap -- Market Velocity (Turnover Ratio)
+────────────────────────────────────────────────────────────────
+Datasets   : source 12 metric 66 (NSE Turnover), source 12 metric 65 (NSE MCap)
+Metrics    : Turnover (Rs Cr monthly), MCap (Rs L Cr), Velocity = Turnover/MCap
+Granularity: Monthly
+Why        : A high-turnover/low-MCap ratio means speculative trading.
+             A low ratio means passive buy-and-hold. India's velocity jumped
+             dramatically with F&O growth -- this chart proves it.
+Chart type : Dual-axis line -- MCap (right), Turnover (left), computed
+             velocity ratio as area fill
+Insight    : NSE monthly turnover now exceeds MCap in some months due to
+             F&O dominance -- structurally different from 2015 market.
+Difficulty : Medium (derived ratio)
+
+#16 NSE vs BSE MCap -- Exchange Dominance Over Time
+────────────────────────────────────────────────────
+Datasets   : source 12 dim 33892 (NSE MCap), source 13 dim 33893 (BSE MCap)
+Metrics    : MCap (Rs L Cr) for each exchange monthly
+Granularity: Monthly
+Why        : BSE was India's premier exchange; NSE overtook it in the 1990s.
+             Today they remain close in MCap (same listed companies largely)
+             but diverge in trading volumes. This shows convergence/divergence.
+Chart type : Dual-line + ratio line (NSE/BSE MCap ratio) on right axis
+Insight    : MCap ratio near 1x (same universe) but turnover ratio 20x+
+             (NSE dominates trading). Two very different stories.
+Difficulty : Easy
+
+#17 Participant Mix vs Market Breadth -- Who Drives Bull/Bear Markets
+────────────────────────────────────────────────────────────────────
+Datasets   : source 16 metric 93 dim 33908-33912 (FPI/MF/Prop/Banks/Others share)
+             source 15 metric 90,91 dim 33906 (Advances, Declines)
+Metrics    : Participant cash share %, A/D ratio
+Granularity: Monthly
+Why        : When FPI dominates -> volatile, driven by global risk appetite.
+             When MF (domestic) dominates -> more stable, fundamentals-driven.
+             A/D breadth shows whether the entire market moves or just large caps.
+Chart type : Stacked area (participant shares, 100%) + A/D ratio line overlay
+Insight    : Post-2020: domestic MF share rose from 10% to 20%+ -- market
+             becomes more resilient. A/D ratio improves alongside.
+Difficulty : Medium (two separate chart types combined)
+
+#18 MCap/GDP vs Nifty P/E vs 10Y Yield -- Valuation Trinity
+────────────────────────────────────────────────────────────
+Datasets   : source 33 dim 34118 (MCap/GDP%), source 33 dim 34127 (Nifty P/E),
+             source 49 dim 34539 (10Y Zero)
+Metrics    : MCap/GDP %, Nifty P/E ratio, 10Y Yield %
+Granularity: Monthly
+Why        : Three valuation perspectives: macro (Buffett indicator), earnings
+             (P/E), and opportunity cost (yield). When all three are elevated
+             simultaneously, the market is expensive by all measures.
+Chart type : Normalized index chart (rebased to 100 at start) -- 3 lines
+Insight    : Post-COVID: MCap/GDP >100%, P/E >30x, yield low -- peak of easy
+             money era. All three now normalizing together.
+Difficulty : Medium (3 series, different scales -> normalization needed)
+
+#19 India VIX vs A/D Ratio vs FPI Flows -- Fear & Flow Dashboard
+─────────────────────────────────────────────────────────────────
+Datasets   : source 33 dim 34128 (India VIX), source 15 dim 33906 (A/D Ratio),
+             source 14 dim 33894 (FPI net flows)
+Metrics    : VIX index, A/D ratio, FPI net flows (Rs Cr)
+Granularity: Monthly
+Why        : VIX measures implied volatility (fear). A/D measures actual
+             breadth (market health). FPI flows show foreign positioning.
+             All three spiking simultaneously = crisis signal.
+Chart type : Three panels stacked -- VIX line, A/D bar, FPI flows bar
+             (green/red); all share the same x-axis timeline
+Insight    : COVID March 2020: VIX 80+, A/D collapsed, FPI sold Rs 1L Cr.
+             Perfect calibration of crisis anatomy.
+Difficulty : Medium
+
+#20 NSE Member Concentration -- Top 5/10/25 Share Over Time
+───────────────────────────────────────────────────────────
+Datasets   : source 17 metric 104,105,106 dim 33949 (Top 5, 10, 25 member share)
+Metrics    : Concentration % at Top-5, Top-10, Top-25 levels
+Granularity: Monthly
+Why        : A handful of brokers handling 60%+ of turnover is a systemic
+             concentration risk. Tracking it over time shows whether the market
+             is democratizing or concentrating further.
+Chart type : Three-band area chart (Top-5 inner, Top-10 middle, Top-25 outer)
+Insight    : Top-5 concentration has stayed sticky at 50-60% for a decade --
+             market structure hasn't changed despite 100m+ demat accounts.
+Difficulty : Easy
+
+#21 NSE Security Concentration vs Market Breadth
+─────────────────────────────────────────────────
+Datasets   : source 17 metric 104,106,108 dim 33946 (Top 5, 25, 100 stocks share),
+             source 15 metric 90,91 (Advances, Declines)
+Metrics    : Security concentration %, A/D ratio monthly
+Granularity: Monthly
+Why        : If top-100 stocks drive 90% of turnover, the "broad market" is
+             an illusion. Pairing with A/D ratio shows whether breadth is
+             consistent with concentration.
+Chart type : Dual-axis -- concentration band (left %) + A/D ratio line (right)
+Insight    : High concentration + poor A/D = hollow bull market. Low
+             concentration + strong A/D = genuine broad participation.
+Difficulty : Easy
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THEME 4 -- CAPITAL FORMATION CHANNELS
+How India raises capital: equity, debt, and alternatives
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#22 Capital Raising Dashboard -- 5 Channels Over Time
+──────────────────────────────────────────────────────
+Datasets   : source 2 metric 4 (Private Placement FY), source 19 metric 96 (QIP FY),
+             source 1 metric 2 (NCD Public Issues FY),
+             source 38 metrics 175+177 (OFS Financial + Non-Financial FY),
+             source 43 metric 109 (Preferential Allotments monthly)
+Metrics    : Annual/FY Rs Cr raised through each channel
+Granularity: Annual (FY)
+Why        : Private placements dominate corporate debt fundraising (Rs 5-8L Cr
+             per year) vs NCD public issues (<Rs 1L Cr). QIP is the primary
+             equity channel for institutional investors. Together they show
+             where India's capital is actually being formed.
+Chart type : Grouped bar chart (5 bars per FY) + total line
+Insight    : Private placement ~85% of corporate capital formation.
+             QIP spike in 2020-21 (COVID recapitalization). NCD is tiny.
+Difficulty : Medium (5 sources, FY alignment)
+
+#23 Private Placement vs Corp Bond Outstanding -- Issuance Building Stock
+─────────────────────────────────────────────────────────────────────────
+Datasets   : source 2 metric 4 (Private Placement), source 5 metric 22 (Corp Bond OS)
+Metrics    : New issuances (Rs Cr FY), Outstanding stock (Rs Cr monthly)
+Granularity: Annual issuance, Monthly outstanding
+Why        : Outstanding = cumulative issuances minus maturities. Comparing
+             annual new issuance with the running outstanding stock shows the
+             market's maturity profile (short-dated vs long-dated paper).
+Chart type : Dual-axis -- PP issuance bars (left), Corp Bond OS line (right)
+Insight    : High annual issuance but stock grows slowly -> short-duration
+             paper being rolled over. Long stock growth -> longer-dated bonds.
+Difficulty : Easy
+
+#24 QIP vs FPI Equity Flows -- Two Paths of Equity Capital
+───────────────────────────────────────────────────────────
+Datasets   : source 19 metric 96 (QIP monthly), source 14 metric 87 (FPI net flows)
+Metrics    : QIP amount (Rs Cr), FPI net flows (Rs Cr) both monthly
+Granularity: Monthly
+Why        : QIP (qualified institutional placement) is domestic company
+             fundraising targeting institutional investors. FPI flows are foreign
+             portfolio investors buying existing shares. When FPI sells, do
+             companies QIP to compensate? Or do they wait?
+Chart type : Dual-bar chart (QIP and FPI bars side by side, monthly)
+Insight    : 2022 FPI selloff of Rs 1.4L Cr -> QIP issuances surged as companies
+             took advantage of institutional demand for primary placement.
+Difficulty : Easy
+
+#25 OFS + Preferential + QIP -- Equity Dilution Mix
+────────────────────────────────────────────────────
+Datasets   : source 38 metrics 175,177 (OFS Financial + Non-Financial),
+             source 43 metric 109 (Preferential), source 19 metric 96 (QIP)
+Metrics    : Monthly Rs Cr raised through each mechanism
+Granularity: Monthly
+Why        : Different equity issuance mechanisms serve different needs.
+             OFS = existing shareholders selling (promoters, PE exits).
+             Preferential = strategic allotments. QIP = institutional fundraise.
+             Mix reveals market cycle stage.
+Chart type : Stacked bar (monthly) -- 4 components + total line
+Insight    : PE/promoter exits (OFS) peak in bull markets. Preferential
+             allotments spike during strategic consolidation phases.
+Difficulty : Easy
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THEME 5 -- FOREIGN INVESTMENT ECOSYSTEM
+FPI, FDI, P-Notes, and currency together
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#26 FPI Flows vs FPI AUC vs USD/INR -- The Foreign Money Cycle
+──────────────────────────────────────────────────────────────
+Datasets   : source 14 metric 87 (FPI net flows), source 20 dim 33925 (FPI AUC),
+             source 33 dim 34093 (USD/INR)
+Metrics    : FPI net flow Rs Cr, FPI AUC Rs Cr, USD/INR spot
+Granularity: Monthly
+Why        : FPI flows affect AUC (portfolio value + net inflows). AUC affects
+             currency demand (FPI must buy INR to invest). Tracking all three
+             together identifies FX-driven vs returns-driven FPI cycles.
+Chart type : Three-panel: FPI flows bar (top), FPI AUC line (middle),
+             USD/INR line (bottom) -- all same x-axis
+Insight    : FPI AUC grew even during some outflow periods (market returns
+             compensated). USD/INR depreciation in outflow periods is sharp.
+Difficulty : Medium
+
+#27 FPI vs FDI Custody Assets -- Portfolio vs Strategic
+────────────────────────────────────────────────────────
+Datasets   : source 20 dim 33925 (FPI AUC), source 20 dim 33927 (FDI AUC)
+Metrics    : FPI AUC (Rs Cr), FDI AUC (Rs Cr), FPI:FDI ratio
+Granularity: Monthly
+Why        : FPI is volatile (hot money), FDI is sticky (strategic investment).
+             The FPI/FDI ratio measures how much of India's foreign capital base
+             is at risk during global risk-off events.
+Chart type : Dual-line chart + ratio line on right axis
+Insight    : FPI AUC has grown 3x faster than FDI AUC since 2015 ->
+             India's foreign capital is increasingly portfolio-dependent.
+Difficulty : Easy
+
+#28 ODI P-Note Usage vs FPI Registrations -- Transparency Indicator
+────────────────────────────────────────────────────────────────────
+Datasets   : source 28 metric 141 (ODI as % of FPI AUC),
+             source 31 dim 34053 (FPI registered count)
+Metrics    : ODI%, FPI registration count monthly
+Granularity: Monthly
+Why        : P-Notes (ODIs) peaked at 55% of FPI AUC before SEBI crackdown.
+             Now below 2%. As ODI usage fell, direct FPI registrations rose.
+             This charts the regulatory-driven transparency shift.
+Chart type : Dual-axis -- ODI % area (left, inverted relationship);
+             FPI registration count line (right)
+Insight    : Perfect inverse correlation -- SEBI tightening ODI rules from
+             2016 onwards coincides with FPI registration boom.
+Difficulty : Easy
+
+#29 FPI Equity + FPI Derivatives Share -- Strategy Shift
+────────────────────────────────────────────────────────
+Datasets   : source 16 dim 33909 (FPI cash share), source 37 dim 34163 (FPI F&O share)
+Metrics    : FPI cash turnover share %, FPI F&O turnover share %
+Granularity: Monthly
+Why        : FPI increasingly trades via derivatives (cheaper, faster,
+             no stamp duty). Cash market FPI share declining while F&O
+             share rises -- FPIs are becoming more sophisticated hedgers.
+Chart type : Dual-line -- Cash share (blue) + F&O share (orange)
+Insight    : FPI derivatives share now rivals their cash share -- structural
+             change in how foreigners participate in Indian markets.
+Difficulty : Easy
+
+#30 FPI Flows vs Forex Reserves vs USD/INR -- RBI Intervention Anatomy
+───────────────────────────────────────────────────────────────────────
+Datasets   : source 14 dim 33894 (FPI net), source 33 dim 34095 (Forex Reserves),
+             source 33 dim 34093 (USD/INR)
+Metrics    : FPI net flows Rs Cr, Forex Reserves USD Bn, USD/INR spot
+Granularity: Monthly
+Why        : When FPI sells Rs for USD -> INR depreciates -> RBI intervenes by
+             selling USD from reserves. The timing of reserve drawdowns vs FPI
+             outflows and USD/INR moves reveals RBI's FX intervention behavior.
+Chart type : Three-axis line chart (FPI bars, Reserves line, INR line)
+Insight    : 2022: Reserves fell $100Bn while FPI sold Rs 1.4L Cr -- RBI
+             defended the rupee systematically. 2024: reserves rebuilt.
+Difficulty : Medium
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THEME 6 -- WEALTH & ASSET MANAGEMENT GROWTH
+Retail savings flowing into financial instruments
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#31 The Financialization of Indian Savings -- 4 Channels
+────────────────────────────────────────────────────────
+Datasets   : source 47 dim 34482 (MF Total AUM), source 46 dim 34425 (PMS AUM),
+             source 32 dims 34086+34085 (Demat Accounts),
+             source 33 dim 34130 (NSE MCap)
+Metrics    : MF AUM Rs Cr, PMS AUM Rs Cr, Demat count (Cr), NSE MCap Rs L Cr
+Granularity: Monthly
+Why        : India's retail savings are moving from physical assets (gold, real
+             estate) to financial instruments at an unprecedented pace. These
+             four series together capture the full picture.
+Chart type : Normalized index chart (all rebased to 100 at Jan 2016) --
+             4 lines showing relative growth trajectory
+Insight    : Demat accounts grew 5x faster than NSE MCap since 2020 --
+             retail participation is the structural story of the decade.
+Difficulty : Medium (normalization + multi-source join)
+
+#32 SIP Contribution vs MF AUM -- Retail Engine of Wealth Creation
+──────────────────────────────────────────────────────────────────
+Datasets   : source 55 dim 34807 (SIP Contribution), source 47 dim 34482 (MF AUM)
+Metrics    : SIP monthly Rs Cr, MF Total AUM Rs Cr
+Granularity: Monthly
+Why        : SIP contributions are the most consistent inflow mechanism.
+             Plotting SIP monthly amount vs total AUM shows what fraction of
+             AUM growth is SIP-driven vs market appreciation.
+Chart type : Dual-axis -- SIP bar (left), MF AUM area (right)
+Insight    : Monthly SIP flows of Rs 25,000 Cr constitute ~1.5% of total AUM
+             per month -- this systematic flow is a market stabilizer.
+Difficulty : Easy
+
+#33 MF Equity vs Debt vs Hybrid AUM -- Risk Appetite of Indian Retail
+──────────────────────────────────────────────────────────────────────
+Datasets   : source 47 dims 34454 (Equity AUM), 34442 (Debt AUM), 34461 (Hybrid)
+Metrics    : AUM Rs Cr for each category, monthly
+Granularity: Monthly
+Why        : The equity:debt ratio in MF AUM is the clearest signal of retail
+             risk appetite. In 2013, debt dominated. By 2024, equity is 55%+.
+             This structural shift has profound implications for bond markets.
+Chart type : 100% stacked area (3 categories) + equity share line
+Insight    : Rising equity share -> less money in debt funds -> less buying
+             of corporate bonds from retail side. Structural shift in debt
+             market ownership.
+Difficulty : Easy
+
+#34 MF Net Flows by Scheme Type -- Money Rotation
+─────────────────────────────────────────────────
+Datasets   : source 47 metric 172 dims 34454,34461,34442,34464,34465,34466,34467
+             (Equity, Hybrid, Debt, Solution, Index, Gold ETF, ETF ex-Gold)
+Metrics    : Net inflow/outflow Rs Cr monthly per scheme type
+Granularity: Monthly
+Why        : Money rotates across scheme types based on market conditions.
+             Gold ETF inflows spike during uncertainty. Index fund inflows
+             are secular. Active equity outflows during corrections.
+Chart type : Grouped bar chart (7 categories per month) -- color-coded
+             by risk level
+Insight    : Visible rotation from active equity to passive index funds since
+             2021 -- India's passive revolution is happening now.
+Difficulty : Easy
+
+#35 PMS AUM + PMS Client Count -- AUM per Client Evolution
+──────────────────────────────────────────────────────────
+Datasets   : source 46 dim 34425 (PMS Total AUM), source 46 dims 34370-34373 (clients)
+Metrics    : Total AUM Rs Cr, Total Clients (count), AUM per client (computed)
+Granularity: Monthly
+Why        : PMS serves HNI clients with minimum Rs 50L investment. As AUM
+             grows faster than clients, it shows existing clients getting richer
+             (market returns > new client additions). Or vice versa.
+Chart type : Dual-axis -- AUM area (right), Client count bars (left),
+             AUM/Client ratio line on second axis
+Insight    : AUM per client jumped from Rs 1.5 Cr to Rs 4 Cr in 5 years --
+             mostly market appreciation, not new capital.
+Difficulty : Medium (derived ratio)
+
+#36 PMS Discretionary vs Non-Discretionary vs Advisory Mix
+────────────────────────────────────────────────────────────
+Datasets   : source 46 dims 34417 (Discretionary), 34418 (Non-Disc), 34420 (Advisory)
+Metrics    : AUM Rs Cr for each service type, monthly
+Granularity: Monthly
+Why        : Discretionary (fund manager decides) vs Non-Discretionary (client
+             approves) vs Advisory (fee-only advice) reveals PMS industry
+             structure and client sophistication.
+Chart type : Stacked bar (trend over time, monthly)
+Insight    : Discretionary dominating shows clients trust professional management.
+             Advisory AUM near zero -> fee-only advice not culturally accepted.
+Difficulty : Easy
+
+#37 Foreign VC Sector Allocation -- What Foreign VCs Bet On
+────────────────────────────────────────────────────────────
+Datasets   : source 26 metric 131 dims 33983-33990 (8 sectors: IT, Pharma,
+             Financial, Infra, Services, Consumer, Real Estate, Others)
+Metrics    : Investment Rs Cr per sector monthly
+Granularity: Monthly (latest 24 months per sector)
+Why        : Foreign venture capital follows growth themes. Heavy IT + Pharma
+             allocation is old story. Real estate and infra rising shows
+             India's infrastructure opportunity attracting global capital.
+Chart type : Radar chart (sector allocation %) + trend line for top 3 sectors
+Insight    : IT share declining from 60% to 40% as new sectors emerge.
+             Financial services VC allocation rising with fintech boom.
+Difficulty : Easy
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THEME 7 -- DERIVATIVES MARKET EVOLUTION
+F&O: size, composition, and participant behavior
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#38 F&O Notional vs Cash Equity Turnover -- Leverage Ratio
+──────────────────────────────────────────────────────────
+Datasets   : source 27 metric 117 (F&O instrument notional total),
+             source 12 metric 66 (NSE cash turnover)
+Metrics    : F&O notional Rs Cr monthly, Cash turnover Rs Cr monthly,
+             F&O/Cash ratio (computed)
+Granularity: Monthly
+Why        : India's F&O market is one of the largest in the world by contracts,
+             yet the underlying cash market is smaller. F&O/Cash ratio shows
+             market leverage. A ratio >50x indicates speculative excess.
+Chart type : Dual-axis -- Cash turnover bars (left), F&O notional bars (right),
+             ratio line overlay
+Insight    : F&O/Cash ratio surpassed 100x in 2023-24. SEBI's Oct 2024
+             restrictions on weekly expiry visible as ratio compression.
+Difficulty : Easy
+
+#39 NSE vs BSE F&O -- Exchange Competition
+───────────────────────────────────────────
+Datasets   : source 27 dim 33998 (NSE F&O annual), source 29 dim 34008 (BSE F&O)
+Metrics    : Annual turnover Rs Cr both exchanges
+Granularity: Annual (calendar year)
+Why        : NSE monopolized F&O for 20 years. BSE launched competing
+             products in 2018. The competition chart shows whether market
+             structure is oligopolistic or converging.
+Chart type : Grouped bar (NSE + BSE per year) + NSE market share line
+Insight    : BSE capturing 15% of F&O by 2024 from near zero in 2018 --
+             significant but NSE still dominant. Post-SEBI restrictions,
+             market share shifting.
+Difficulty : Easy
+
+#40 F&O Instrument Breakdown -- Options vs Futures Evolution
+────────────────────────────────────────────────────────────
+Datasets   : source 27 metric 117 dims 33994-33997 (4 option types),
+             dims 33993,33992 (Index futures, Stock futures)
+Metrics    : Monthly notional Rs Cr per instrument
+Granularity: Monthly
+Why        : Options notional vastly exceeds futures -- India is an options
+             market. Within options, weekly vs monthly expiry mix shows SEBI
+             regulation effectiveness. Futures declining means less directional
+             betting.
+Chart type : 100% stacked area (6 instruments monthly)
+Insight    : Index options = 90%+ of F&O by notional. Stock options trivial.
+             After SEBI Oct 2024, weekly options collapsing.
+Difficulty : Easy
+
+#41 Derivatives Participant Mix -- FPI vs DII vs Retail
+────────────────────────────────────────────────────────
+Datasets   : source 37 metric 93 dims 34163-34166 (FPI, DII, Client, Prop)
+Metrics    : Derivatives turnover share % per participant monthly
+Granularity: Monthly
+Why        : Retail "client" participation in derivatives is a systemic risk --
+             SEBI studies show 90% of retail F&O traders lose money. Tracking
+             retail vs institutional mix shows where the risk sits.
+Chart type : 100% stacked area (4 participants) + retail share line overlay
+Insight    : Retail (client) share in F&O has been 35-40% consistently --
+             a large loss-making segment sustaining the market's liquidity.
+Difficulty : Easy
+
+#42 Clearing Fund Pay-in vs F&O Turnover -- Risk Management Scale
+─────────────────────────────────────────────────────────────────
+Datasets   : source 24,25 metric 126 dims 33981,33982 (NSCCL + ICCL pay-in),
+             source 27 metric 133 (F&O contracts)
+Metrics    : Annual clearing fund pay-in Rs Cr, F&O turnover Rs Cr
+Granularity: Annual
+Why        : Clearing house margin requirements (pay-in) must scale with F&O
+             turnover. If turnover grows 5x but pay-in grows 2x, the market
+             is under-margined -- systemic risk is rising.
+Chart type : Dual-axis bar (pay-in left) + line (F&O turnover right),
+             pay-in/turnover ratio as secondary line
+Insight    : Ratio of margin/turnover has tightened post-SEBI peak-margin
+             rules in 2021 -> risk management improved.
+Difficulty : Easy
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THEME 8 -- MACRO ENVIRONMENT & MARKET LINKAGES
+Inflation, trade, money supply, and their market effects
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#43 CPI + WPI + Trade Balance -- Inflation vs External Sector
+─────────────────────────────────────────────────────────────
+Datasets   : source 33 dim 34088 (CPI), dim 34117 (WPI), dim 34094 (Trade Balance)
+Metrics    : CPI YoY %, WPI YoY %, Trade Deficit USD Bn
+Granularity: Monthly
+Why        : High WPI (producer prices) with negative trade balance = India
+             importing inflation (commodity imports rising). CPI lag behind WPI
+             predicts when RBI will be forced to act. Three-way linkage.
+Chart type : Dual-axis -- CPI + WPI lines (left %), Trade Balance bar (right)
+Insight    : WPI led CPI by ~3 months during 2022 commodity shock. Trade
+             deficit widened simultaneously -> imported inflation confirmed.
+Difficulty : Easy
+
+#44 M3 Money Supply vs NSE MCap vs MF AUM -- Liquidity Channels
+────────────────────────────────────────────────────────────────
+Datasets   : source 33 dim 34103 (M3), source 12 dim 33892 (NSE MCap),
+             source 47 dim 34482 (MF AUM)
+Metrics    : M3 Rs Cr, NSE MCap Rs L Cr, MF AUM Rs Cr
+Granularity: Monthly
+Why        : M3 is total money supply. It flows into financial assets via MCap
+             and MF routes. M3/MCap ratio shows "financialization of liquidity."
+             As M3 grows, does it go into equity or MF or real economy?
+Chart type : Normalized lines (all indexed to 100 at start) -- 3 series
+Insight    : MCap grew 6x vs M3 growing 2.5x since 2014 -> equity wealth
+             creation outpaced money supply growth (multiple expansion).
+Difficulty : Medium (normalization)
+
+#45 Manufacturing PMI vs NSE MCap vs FPI Flows -- Growth Expectations
+──────────────────────────────────────────────────────────────────────
+Datasets   : source 33 dim 34111 (Mfg PMI), source 12 dim 33892 (NSE MCap),
+             source 14 dim 33894 (FPI net flows)
+Metrics    : PMI index (50 = neutral), NSE MCap Rs L Cr, FPI flows Rs Cr
+Granularity: Monthly
+Why        : PMI is a leading economic indicator. When PMI falls below 50
+             (contraction), do FPIs sell equities? Does MCap correct? This
+             chart shows whether markets price economic reality or ignore it.
+Chart type : Three-panel: PMI bar (top, 50-line reference); MCap line (middle);
+             FPI flows bar (bottom)
+Insight    : India's PMI has stayed above 50 for 40+ months (2021-2025) --
+             exceptional compared to global manufacturing slowdown. Yet FPI
+             flows volatile -> global factors override India's fundamentals.
+Difficulty : Medium
+
+#46 Trade Balance vs Forex Reserves vs USD/INR -- External Vulnerability
+─────────────────────────────────────────────────────────────────────────
+Datasets   : source 33 dim 34094 (Trade Balance), dim 34095 (Forex Reserves),
+             dim 34093 (USD/INR)
+Metrics    : Trade Deficit USD Bn, Forex Reserves USD Bn, USD/INR spot
+Granularity: Monthly
+Why        : Trade deficit is the fundamental driver of rupee weakness. Forex
+             reserves are the buffer. Months of import cover = Reserves/Imports.
+             Together these define India's external sector resilience.
+Chart type : Three-axis: Trade deficit bars (left, inverted), Reserves line
+             (middle axis), USD/INR line (right)
+Insight    : When reserves >$600Bn, India can absorb FPI outflows + trade
+             deficit for 12+ months. Current situation vs 2013 "taper tantrum"
+             is dramatically different.
+Difficulty : Medium
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THEME 9 -- MARKET STRUCTURE & INTERMEDIARIES
+Registry, custody, and clearing infrastructure
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#47 Demat Account Growth vs NSE MCap -- Retail Democratization
+──────────────────────────────────────────────────────────────
+Datasets   : source 32 dims 34086+34085 (CDSL + NSDL demat, Lakh),
+             source 12 dim 33892 (NSE MCap)
+Metrics    : Demat accounts (Crore), NSE MCap (Rs L Cr)
+Granularity: Monthly
+Why        : Demat accounts went from 2.5 Cr (2019) to 17 Cr (2025) -- a 7x
+             surge. MCap went from Rs 150 L Cr to Rs 450 L Cr -- a 3x surge.
+             New accounts outpacing MCap growth -> markets becoming crowded.
+Chart type : Dual-axis -- Demat count bar (left), MCap line (right),
+             MCap-per-demat-account computed ratio as secondary line
+Insight    : MCap per demat account has FALLEN from Rs 60L to Rs 27L -> each
+             retail investor has less wealth than before despite bull market.
+Difficulty : Medium (derived ratio)
+
+#48 CDSL vs NSDL Demat Growth -- Custody Competition
+─────────────────────────────────────────────────────
+Datasets   : source 32 dim 34086 (CDSL), dim 34085 (NSDL)
+Metrics    : Account count (Lakh) for each depository, monthly
+Granularity: Monthly
+Why        : NSDL was India's first depository; CDSL was smaller. COVID-era
+             retail boom benefited CDSL more (Zerodha, Groww, discount brokers
+             use CDSL). Dramatic market share shift in custody industry.
+Chart type : Dual-area chart (stacked) + CDSL share % line
+Insight    : CDSL surpassed NSDL in account count around 2020 and is now
+             60%+ of total demat accounts -- disruptive business model impact.
+Difficulty : Easy
+
+#49 AIF + FPI + Stock Exchange Members -- Intermediary Growth
+─────────────────────────────────────────────────────────────
+Datasets   : source 31 dims 34071 (AIFs), 34053 (FPIs), 34072 (stock brokers),
+             34075, 34073, 34076, 34077 (other intermediaries)
+Metrics    : Count of registered entities monthly per type
+Granularity: Monthly
+Why        : The intermediary layer shows the sophistication of the market.
+             FPI growth tracks foreign interest. AIF growth tracks institutional
+             alternatives adoption. Together they show where financial services
+             growth is concentrated.
+Chart type : Multi-line chart (7 intermediary types, each normalized to 100)
+Insight    : AIF registrations growing fastest (alternatives boom).
+             FPI registrations plateaued post-2019 SEBI consolidation rules.
+Difficulty : Easy
+
+#50 SLR + CRR + G-Sec Outstanding -- Structural Demand Floor
+────────────────────────────────────────────────────────────
+Datasets   : source 11 metric 52 (SLR%), source 11 metric 51 (CRR%),
+             source 8 metric 29 (G-Sec OS FY)
+Metrics    : SLR %, CRR %, G-Sec outstanding Rs L Cr
+Granularity: Annual (FY aligned)
+Why        : SLR mandates banks to hold G-Secs equal to X% of NDTL. As SLR
+             falls from 38% to 18%, banks are freed from mandatory G-Sec
+             holding. Yet G-Sec stock keeps rising. Who is buying? This chart
+             sets up the question.
+Chart type : Dual-axis -- SLR line (left %), G-Sec OS bars (right) -- already built
+Insight    : SLR fell 55% over 30 years; G-Sec stock grew 20x -> mandatory
+             demand has become structural demand (banks buy anyway).
+Difficulty : Easy (already implemented as SLR+CRR vs G-Sec chart)
+
+#51 Commodity Exchange Market Share -- MCX Dominance
+────────────────────────────────────────────────────
+Datasets   : source 30 (MCX), source 39 (NCDEX), source 41 (NSE Commodity),
+             source 40 (BSE Commodity) -- metric 117/166
+Metrics    : Monthly turnover Rs Cr + contracts count per exchange
+Granularity: Monthly
+Why        : MCX dominates commodity derivatives (Bullion, Energy, Metals).
+             NCDEX is agri-focused. NSE entered commodities in 2018.
+             Market share evolution shows competitive dynamics.
+Chart type : 100% stacked bar (4 exchanges monthly) + MCX share % line
+Insight    : MCX holds 85%+ and has been resilient despite NSE entry.
+             NCDEX declining due to agri policy uncertainty.
+Difficulty : Easy
+
+#52 iCOMDEX Composite vs USD/INR vs CPI -- Commodity Inflation Channel
+───────────────────────────────────────────────────────────────────────
+Datasets   : source 21 metric 102 dim 33941 (iCOMDEX Composite),
+             source 33 dim 34093 (USD/INR), source 33 dim 34088 (CPI)
+Metrics    : iCOMDEX index level, USD/INR spot, CPI YoY %
+Granularity: Monthly
+Why        : India imports most commodities priced in USD. When USD/INR rises
+             AND global commodity prices rise (iCOMDEX up) -> double impact on
+             CPI. This three-way chart shows the imported inflation mechanism.
+Chart type : Normalized 3-line chart (all rebased to 100 at 2019) --
+             leads and lags clearly visible
+Insight    : 2022: iCOMDEX +40%, USD/INR +8%, CPI peaked 7.8% -> imported
+             inflation was the primary driver. 2024: all three normalizing.
+Difficulty : Medium (normalization, different units)
+
+
+=============================================================================
+QUICK-WINS PRIORITY LIST (data mostly already fetched in existing pages)
+=============================================================================
+
+TRIVIAL (zero new API calls -- data already in state):
+  #11  1Y-10Y Spread vs Repo Rate      (ratesData already has z1 + z10)
+  #39  NSE vs BSE F&O Annual           (fetchDerivAnnualNse/Bse already called)
+  #40  F&O Instrument Breakdown        (fetchDerivInstBreakdown already fetched)
+  #41  Derivatives Participant Mix     (fetchDerivParticipationMix already fetched)
+
+EASY (1-2 new API calls, no computation):
+  #3   Repo Rate vs NSE MCap
+  #4   Repo Rate vs FPI Flows
+  #5   Repo Rate vs Corp Bond OS
+  #6   SLR + CRR + Repo Rate
+  #7   Sovereign Funding Mix (G-Sec + SDL + SGB)
+  #9   NSE WDM Security Mix
+  #16  NSE vs BSE MCap
+  #20  NSE Member Concentration
+  #21  NSE Security Concentration vs Breadth
+  #23  Private Placement vs Corp Bond OS
+  #24  QIP vs FPI Equity Flows
+  #25  OFS + Preferential + QIP Mix
+  #28  ODI P-Note % vs FPI Registrations
+  #29  FPI Cash vs Derivatives Share
+  #32  SIP Contribution vs MF AUM
+  #33  MF Equity vs Debt vs Hybrid AUM
+  #34  MF Net Flows by Scheme Type
+  #36  PMS Service Mix Trend
+  #43  CPI + WPI + Trade Balance
+  #48  CDSL vs NSDL Demat Growth
+  #49  AIF + FPI Intermediary Growth
+  #51  Commodity Exchange Market Share
+
+MEDIUM (derived metrics or 3+ source joins):
+  #1   Rate Transmission Dashboard (4-series)
+  #2   Real Yield (YoY computation + area)
+  #8   G-Sec Auction vs 10Y Yield
+  #13  FBIL Zero Curve Multi-Date Overlay
+  #15  NSE Turnover/MCap Velocity Ratio
+  #17  Participant Mix vs A/D Breadth
+  #18  MCap/GDP vs P/E vs 10Y Yield
+  #19  India VIX vs A/D vs FPI Flows
+  #22  Capital Raising 5-Channel Dashboard
+  #26  FPI Flows + AUC + USD/INR
+  #30  FPI + Forex + USD/INR
+  #31  Financialization of Savings (4 sources normalized)
+  #35  PMS AUM/Client Ratio
+  #38  F&O vs Cash Leverage Ratio
+  #44  M3 vs MCap vs MF AUM
+  #45  PMI vs MCap vs FPI
+  #47  Demat + MCap per Account Ratio
+  #52  iCOMDEX + USD/INR + CPI
+
+
+=============================================================================
+DATASET MASTER REFERENCE
+=============================================================================
+
+SOURCE   WHAT IT IS                          KEY METRICS       GRANULARITY
+-------  ----------------------------------  ----------------  -----------
+src 1    NCD Public Issues (SEBI)            Rs Cr amount      FY
+src 2    Private Placements (SEBI)           Rs Cr amount      FY/monthly
+src 3    Corp Bond Trades (SEBI)             Rs Cr volume      quarterly
+src 4    Corp Bond Legacy Outstanding        Rs Cr             quarterly
+src 5    Corp Bond Outstanding (TRACKS)      Rs Cr             monthly
+src 6    Sovereign Gold Bonds                Rs Cr, units      FY
+src 7    State Development Loans (SDL/SGS)   Rs Cr             FY
+src 8    Government Securities (G-Sec)       Rs Cr             FY/snapshot
+src 9    STRIPS (G-Sec Stripped)             Rs Cr             FY/snapshot
+src 10   NSE EBP Issuance                    Rs Cr             monthly
+src 11   RBI Policy Rates                    % (7 metrics)     monthly
+src 12   NSE Equity                          Rs Cr, count      monthly
+src 13   BSE Equity                          Rs Cr             monthly
+src 14   FPI Flows                           Rs Cr, USD M      monthly
+src 15   NSE Market Breadth (A/D)            ratio, count      monthly
+src 16   NSE Participant Mix                 %                 monthly
+src 17   NSE Member/Security Concentration   %                 monthly
+src 18   NSE/BSE Volatility                  %                 monthly
+src 19   QIP Issues                          Rs Cr, count      monthly
+src 20   Custodian AUC (FPI + FDI)           Rs Cr             monthly
+src 21   MCX iCOMDEX Indices                 index             monthly
+src 22   AMFI MF Statistics (legacy)         Rs Cr             monthly/FY
+src 24   NSCCL Clearing Fund                 Rs Cr             FY
+src 25   ICCL Clearing Fund                  Rs Cr             FY
+src 26   Foreign VC Sector Allocation        Rs Cr             monthly
+src 27   NSE Derivatives (F&O)               Rs Cr, count      monthly/annual
+src 28   ODI / P-Notes                       Rs Cr, %          monthly
+src 29   BSE Derivatives                     Rs Cr             annual
+src 30   MCX Commodity Futures               Rs Cr             monthly
+src 31   SEBI Intermediary Registry          count             monthly
+src 32   Depository (CDSL + NSDL)            Lakh accounts     monthly
+src 33   Macro Indicators (RBI/MOSPI/SEBI)   mixed             monthly
+src 34   NSE Trading Frequency               count, %          monthly
+src 36   Currency Derivatives (NSE)          Rs Cr             monthly
+src 37   F&O Participant Mix                 %                 monthly
+src 38   OFS Issues                          Rs Cr             monthly
+src 39   NCDEX Commodity                     Rs Cr, count      monthly
+src 40   BSE Commodity                       Rs Cr, count      monthly
+src 41   NSE Commodity                       Rs Cr, count      monthly
+src 42   SAST Takeover Offers                count             monthly
+src 43   Preferential Allotments             Rs Cr             monthly
+src 44   Corp Debt Private Placements        Rs Cr             monthly
+src 46   Portfolio Managers (SEBI PMS)       Rs Cr, count      monthly
+src 47   Mutual Funds (AMFI TRACKS)          Rs Cr             monthly
+src 48   RBI Repo Rate (new source)          %                 monthly
+src 49   FBIL Zero Curve                     % (25 tenors)     daily
+src 51   CCIL ZCYC NSS Parameters            Beta0, Beta1      daily
+src 52   G-Sec Auction Data (FIMMDA)         Rs Cr, %          FY
+src 53   SDL Auction Data                    Rs Cr, %          FY
+src 54   NSE WDM Trades                      Rs Cr             monthly
+src 55   AMFI SIP Data                       Rs Cr             monthly
+
+=============================================================================
+END OF FILE
+=============================================================================

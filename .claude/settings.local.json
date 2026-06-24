@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:gist.githubusercontent.com)",
+      "Bash(ls src/*.json)",
+      "Bash(ls public/*.json)",
+      "Bash(node -e \"const g = require\\(''./src/india-full.json''\\); console.log\\(''Features:'', g.features.length\\); console.log\\(''Names:'', g.features.map\\(f => f.properties.name || f.properties.NAME_1 || f.properties.ST_NM || JSON.stringify\\(Object.keys\\(f.properties\\)\\)\\).join\\('', ''\\)\\)\")",
+      "Bash(curl -s --max-time 15 \"https://raw.githubusercontent.com/datameet/maps/master/Country/india-composite.geojson\")",
+      "Bash(curl -s --max-time 15 \"https://raw.githubusercontent.com/geohacker/india/master/state/india_telengana.geojson\")",
+      "Bash(node -e \"let d=''''''''; process.stdin.on\\(''''data'''',c=>d+=c\\); process.stdin.on\\(''''end'''',\\(\\)=>{ try{ const g=JSON.parse\\(d\\); console.log\\(''''Features:'''', g.features?.length\\); const names=g.features?.map\\(f=>Object.values\\(f.properties||{}\\)[0]\\); console.log\\(''''First names:'''', names?.slice\\(0,5\\)\\); console.log\\(''''Keys:'''', Object.keys\\(g.features?.[0]?.properties||{}\\)\\); }catch\\(e\\){console.log\\(''''fail'''',e.message,d.slice\\(0,200\\)\\);}}\\)\")",
+      "Bash(curl -s --max-time 20 \"https://raw.githubusercontent.com/Subhash9325/GeoJson-Data-of-Indian-States/master/Indian_States\")",
+      "Bash(curl -s --max-time 20 \"https://raw.githubusercontent.com/answerdev/answer/main/ui/src/pages/Users/Login/index.tsx\" -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s --max-time 20 \"https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187fea01ca62ea5112/raw/e388c4cae20aa53cb5090210a42ebb9b765c0a36/india_states.geojson\")"
+    ]
+  }
+}

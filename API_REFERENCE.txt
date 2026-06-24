@@ -1,0 +1,1111 @@
+================================================================================
+  BOND ANALYTICS v1  —  COMPLETE API ENDPOINT REFERENCE
+  Base URL : https://bondanalytics-api.bondbulls.in
+  Updated  : 2026-06-11
+================================================================================
+
+  THREE REUSABLE ENDPOINT PATTERNS
+  ─────────────────────────────────
+  [AGGREGATE]  GET /analytics/aggregate?<params>
+  [SNAPSHOT]   GET /analytics/snapshot-data?<params>
+  [RAW]        GET /analytics_data/?<params>
+
+  All other endpoints listed are fixed-path (no query params unless noted).
+
+================================================================================
+  SIDEBAR — TAB IDs
+================================================================================
+  Overview          navTo=overview   DOM=sni-overview
+  Market Pulse      navTo=mp         DOM=sni-mp
+  Debt Markets      navTo=dm         DOM=sni-dm
+  FPI Tracker       navTo=fpi        DOM=sni-fpi
+  Derivatives       navTo=deriv      DOM=sni-deriv
+  Primary Markets   navTo=prim       DOM=sni-prim
+  Mutual Funds      navTo=mf         DOM=sni-mf
+  Wealth Management navTo=wm         DOM=sni-wm
+  ODI Tracker       navTo=odi        DOM=sni-odi
+  Commodity Markets navTo=comm       DOM=sni-comm
+  Intermediaries    navTo=im         DOM=sni-im
+  Macro Indicators  navTo=macro      DOM=sni-macro
+  Insights          navTo=insights   DOM=sni-insights
+
+
+================================================================================
+  1. OVERVIEW PAGE
+================================================================================
+
+  ── KPI CARDS ────────────────────────────────────────────────────────────────
+
+  [KPI-1] NSE MARKET CAP
+    GET /analytics/aggregate
+      ?source_id=12&date_attribute_type_id=3&metric_id=65
+      &dimension_type_id=33&dimension_id=33892
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-2] BSE MARKET CAP
+    GET /analytics/aggregate
+      ?source_id=13&date_attribute_type_id=3&metric_id=65
+      &dimension_type_id=33&dimension_id=33893
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-3] FPI NET FLOW YTD
+    GET /analytics/aggregate
+      ?source_id=14&date_attribute_type_id=3&metric_id=87
+      &granularity=month&aggregation=sum
+      &start_date=<YYYY>-01-01&end_date=<YYYY>-12-31&limit=500
+    Note: <YYYY> = current calendar year
+
+  [KPI-4] QIP RAISED YTD
+    GET /analytics/aggregate
+      ?source_id=19&date_attribute_type_id=3&metric_id=96
+      &dimension_id=33924&granularity=financial_year&aggregation=sum&limit=1
+
+  [KPI-5] REGISTERED AIFS
+    GET /analytics/aggregate
+      ?source_id=31&date_attribute_type_id=3&metric_id=143
+      &dimension_id=34071&granularity=month&aggregation=sum&limit=1
+
+  [KPI-6] REGISTERED FPIS
+    GET /analytics/aggregate
+      ?source_id=31&date_attribute_type_id=3&metric_id=143
+      &dimension_id=34053&granularity=month&aggregation=sum&limit=1
+
+  [KPI-7] TOTAL DEMAT ACCOUNTS  (2 calls, values summed in component)
+    Call A  GET /analytics/aggregate
+              ?source_id=32&date_attribute_type_id=3&metric_id=147
+              &dimension_id=34086&granularity=month&aggregation=sum&limit=1
+    Call B  GET /analytics/aggregate
+              ?source_id=32&date_attribute_type_id=3&metric_id=147
+              &dimension_id=34085&granularity=month&aggregation=sum&limit=1
+    Note: 34086=CDSL · 34085=NSDL · values in lakh ÷100 = Crore
+
+  ── METRIC STRIP ─────────────────────────────────────────────────────────────
+
+  [MET-1] INDIA VIX
+    GET /analytics_data/?source_id=33&dimension_id=34128&metric_id=160&limit=100
+    Note: value lives in metric_text (metric_value is null for this dataset)
+
+  [MET-2] NIFTY P/E
+    GET /analytics_data/?source_id=33&dimension_id=34127&metric_id=160&limit=100
+    Note: value lives in metric_text
+
+  [MET-3] OTHERS CASH SHARE
+    GET /analytics/aggregate
+      ?source_id=16&date_attribute_type_id=3&metric_id=93
+      &dimension_id=33912&granularity=month&aggregation=sum&limit=1
+
+  ── CHARTS ───────────────────────────────────────────────────────────────────
+
+  [CHT-1] NSE Market Capitalisation  (line, last 24 months)
+    GET /analytics/aggregate
+      ?source_id=12&date_attribute_type_id=3&metric_id=65
+      &granularity=month&aggregation=sum
+      &start_date=<24mo ago>&end_date=<today>&limit=100
+    Note: values ÷100000 = ₹ Lakh Crore
+
+  [CHT-2] FPI Net Flows Monthly  (bar, last 24 months)
+    GET /analytics/aggregate
+      ?source_id=14&date_attribute_type_id=3&metric_id=87
+      &granularity=month&aggregation=sum
+      &start_date=<24mo ago>&end_date=<today>&limit=100
+
+  [CHT-3] Annual NSE Equity Turnover  (bar, all years)
+    GET /analytics/aggregate
+      ?source_id=12&date_attribute_type_id=3&metric_id=66
+      &granularity=month&aggregation=sum
+      &start_date=2015-01-01&end_date=<YYYY>-12-31&limit=500
+    Note: monthly data grouped to calendar year in component
+
+  [CHT-4] Annual FPI Net Flows  (bar, all years)
+    GET /analytics/aggregate
+      ?source_id=14&date_attribute_type_id=3&metric_id=87
+      &granularity=month&aggregation=sum
+      &start_date=2014-01-01&end_date=<YYYY>-12-31&limit=500
+    Note: monthly data grouped to calendar year in component
+
+  [CHT-5] NSE Participant Share  (donut — 5 parallel calls)
+    Call each dim_id separately:
+    GET /analytics/aggregate
+      ?source_id=16&date_attribute_type_id=3&metric_id=93
+      &dimension_id=<DIM>&granularity=month&aggregation=sum&limit=1
+    dim_id: 33908=Proprietary · 33909=FPIs · 33910=Mutual Funds
+            33911=Banks · 33912=Others
+
+  [CHT-6] Advance / Decline Ratio  (line, last 24 months)
+    GET /analytics/aggregate
+      ?source_id=15&date_attribute_type_id=3&metric_id=92
+      &dimension_type_id=36&dimension_id=33906
+      &granularity=month&aggregation=sum
+      &start_date=<24mo ago>&end_date=<today>&limit=100
+
+
+================================================================================
+  2. MARKET PULSE PAGE
+================================================================================
+
+  ── KPI ROW 1 ────────────────────────────────────────────────────────────────
+
+  [KPI-1] NSE MARKET CAP
+    GET /analytics/aggregate
+      ?source_id=12&date_attribute_type_id=3&metric_id=65
+      &dimension_type_id=33&dimension_id=33892
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-2] BSE MARKET CAP
+    GET /analytics/aggregate
+      ?source_id=13&date_attribute_type_id=3&metric_id=65
+      &dimension_type_id=33&dimension_id=33893
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-3] NSE MONTHLY TURNOVER
+    GET /analytics/aggregate
+      ?source_id=12&date_attribute_type_id=3&metric_id=66
+      &dimension_type_id=33&dimension_id=33892
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-4] BSE MONTHLY TURNOVER
+    GET /analytics/aggregate
+      ?source_id=13&date_attribute_type_id=3&metric_id=66
+      &dimension_type_id=33&dimension_id=33893
+      &granularity=month&aggregation=sum&limit=1
+
+  ── KPI ROW 2 ────────────────────────────────────────────────────────────────
+
+  [KPI-5] A/D RATIO
+    GET /analytics/aggregate
+      ?source_id=15&date_attribute_type_id=3&metric_id=92
+      &dimension_type_id=36&dimension_id=33906
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-6] NIFTY VOLATILITY
+    GET /analytics/aggregate
+      ?source_id=18&date_attribute_type_id=3&metric_id=94
+      &dimension_type_id=38&dimension_id=33916
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-7] MF CASH SHARE
+    GET /analytics/aggregate
+      ?source_id=16&date_attribute_type_id=3&metric_id=93
+      &dimension_type_id=37&dimension_id=33910
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-8] NSE TOP-10 MEMBER CONCENTRATION
+    GET /analytics/aggregate
+      ?source_id=17&date_attribute_type_id=3&metric_id=105
+      &dimension_type_id=42&dimension_id=33949
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-9] NSE TRADED SECURITIES
+    GET /analytics/aggregate
+      ?source_id=12&date_attribute_type_id=3&metric_id=68
+      &dimension_type_id=33&dimension_id=33892
+      &granularity=month&aggregation=sum&limit=1
+
+  ── MINI CHARTS ──────────────────────────────────────────────────────────────
+
+  [MINI-1] NSE + BSE Market Cap  (2 calls)
+    NSE: GET /analytics/aggregate
+           ?source_id=12&date_attribute_type_id=3&metric_id=65
+           &dimension_type_id=33&dimension_id=33892&granularity=month&aggregation=sum&limit=500
+    BSE: GET /analytics/aggregate
+           ?source_id=13&date_attribute_type_id=3&metric_id=65
+           &dimension_type_id=33&dimension_id=33893&granularity=month&aggregation=sum&limit=500
+
+  [MINI-2] Traded Quantity NSE + BSE  (2 calls)
+    NSE: GET /analytics/aggregate
+           ?source_id=12&date_attribute_type_id=3&metric_id=74
+           &dimension_type_id=33&dimension_id=33892&granularity=month&aggregation=sum&limit=500
+    BSE: GET /analytics/aggregate
+           ?source_id=13&date_attribute_type_id=3&metric_id=74
+           &dimension_type_id=33&dimension_id=33893&granularity=month&aggregation=sum&limit=500
+
+  [MINI-3] FY Net Equity Flows FPI  (2 calls)
+    Purchase: GET /analytics/aggregate
+                ?source_id=14&date_attribute_type_id=3&metric_id=85
+                &granularity=financial_year&aggregation=sum&limit=500
+    Sales:    GET /analytics/aggregate
+                ?source_id=14&date_attribute_type_id=3&metric_id=86
+                &granularity=financial_year&aggregation=sum&limit=500
+
+  ── MAIN CHARTS ──────────────────────────────────────────────────────────────
+
+  [CHT-1] NSE + BSE Market Cap  (same calls as MINI-1)
+
+  [CHT-2] NSE Monthly Turnover
+    GET /analytics/aggregate
+      ?source_id=12&date_attribute_type_id=3&metric_id=66
+      &dimension_type_id=33&dimension_id=33892
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-3] Avg Monthly Turnover NSE vs BSE  (2 calls)
+    NSE: same as CHT-2 above
+    BSE: GET /analytics/aggregate
+           ?source_id=13&date_attribute_type_id=3&metric_id=66
+           &dimension_type_id=33&dimension_id=33893&granularity=month&aggregation=sum&limit=500
+
+  [CHT-4] NSE Peak Market Cap by Year
+    GET /analytics/aggregate
+      ?source_id=12&date_attribute_type_id=3&metric_id=65
+      &dimension_type_id=33&dimension_id=33892
+      &granularity=month&aggregation=sum&limit=500
+    Note: grouped to year, max per year in component
+
+  [CHT-5] NSE Member Concentration  (3 calls)
+    Top-5:  GET /analytics/aggregate?source_id=17&date_attribute_type_id=3&metric_id=104&dimension_type_id=42&dimension_id=33949&granularity=month&aggregation=sum&limit=500
+    Top-10: GET /analytics/aggregate?source_id=17&date_attribute_type_id=3&metric_id=105&dimension_type_id=42&dimension_id=33949&granularity=month&aggregation=sum&limit=500
+    Top-25: GET /analytics/aggregate?source_id=17&date_attribute_type_id=3&metric_id=106&dimension_type_id=42&dimension_id=33949&granularity=month&aggregation=sum&limit=500
+
+  [CHT-6] NSE Trading Frequency  (3 calls)
+    Listed:     GET /analytics/aggregate?source_id=34&date_attribute_type_id=3&metric_id=67&dimension_id=34160&granularity=month&aggregation=sum&limit=500
+    Traded:     GET /analytics/aggregate?source_id=34&date_attribute_type_id=3&metric_id=68&dimension_id=34160&granularity=month&aggregation=sum&limit=500
+    Trade/List: GET /analytics/aggregate?source_id=34&date_attribute_type_id=3&metric_id=161&dimension_id=34160&granularity=month&aggregation=sum&limit=500
+
+  [CHT-7] NSE Security Concentration  (3 calls)
+    Top-5:   GET /analytics/aggregate?source_id=17&date_attribute_type_id=3&metric_id=104&dimension_type_id=42&dimension_id=33946&granularity=month&aggregation=sum&limit=500
+    Top-25:  GET /analytics/aggregate?source_id=17&date_attribute_type_id=3&metric_id=106&dimension_type_id=42&dimension_id=33946&granularity=month&aggregation=sum&limit=500
+    Top-100: GET /analytics/aggregate?source_id=17&date_attribute_type_id=3&metric_id=108&dimension_type_id=42&dimension_id=33946&granularity=month&aggregation=sum&limit=500
+
+  [CHT-8] NSE Market Breadth — Advances vs Declines  (2 calls)
+    Advances: GET /analytics/aggregate?source_id=15&date_attribute_type_id=3&metric_id=90&dimension_type_id=36&dimension_id=33906&granularity=month&aggregation=sum&limit=500
+    Declines: GET /analytics/aggregate?source_id=15&date_attribute_type_id=3&metric_id=91&dimension_type_id=36&dimension_id=33906&granularity=month&aggregation=sum&limit=500
+
+  [CHT-9] Index Volatility — Sensex & Nifty  (2 calls)
+    Sensex: GET /analytics/aggregate?source_id=18&date_attribute_type_id=3&metric_id=94&dimension_type_id=38&dimension_id=33913&granularity=month&aggregation=sum&limit=500
+    Nifty:  GET /analytics/aggregate?source_id=18&date_attribute_type_id=3&metric_id=94&dimension_type_id=38&dimension_id=33916&granularity=month&aggregation=sum&limit=500
+
+  [CHT-10] NSE Participant Mix  (5 calls — one per dim)
+    FPI:    GET /analytics/aggregate?source_id=16&date_attribute_type_id=3&metric_id=93&dimension_type_id=37&dimension_id=33909&granularity=month&aggregation=sum&limit=500
+    MF:     GET /analytics/aggregate?source_id=16&date_attribute_type_id=3&metric_id=93&dimension_type_id=37&dimension_id=33910&granularity=month&aggregation=sum&limit=500
+    Prop:   GET /analytics/aggregate?source_id=16&date_attribute_type_id=3&metric_id=93&dimension_type_id=37&dimension_id=33908&granularity=month&aggregation=sum&limit=500
+    Others: GET /analytics/aggregate?source_id=16&date_attribute_type_id=3&metric_id=93&dimension_type_id=37&dimension_id=33912&granularity=month&aggregation=sum&limit=500
+    Banks:  GET /analytics/aggregate?source_id=16&date_attribute_type_id=3&metric_id=93&dimension_type_id=37&dimension_id=33911&granularity=month&aggregation=sum&limit=500
+
+
+================================================================================
+  3. DEBT MARKETS PAGE  (sub-tabs: Overview · G-Secs · SGS · Corp Bonds · SGB)
+================================================================================
+
+  ── SUB-TAB: OVERVIEW ────────────────────────────────────────────────────────
+
+  [KPI-1] G-SEC OUTSTANDING
+    GET /analytics/snapshot-data
+      ?source_id=8&date_attribute_type_id=5&dimension_type_id=14&metric_id=29
+    Note: sums all returned rows
+
+  [KPI-2] SGS OUTSTANDING
+    GET /analytics/snapshot-data
+      ?source_id=7&date_attribute_type_id=5&dimension_type_id=11&metric_id=29
+
+  [KPI-3] CORP BOND OUTSTANDING
+    GET /analytics/snapshot-data
+      ?source_id=5&date_attribute_type_id=3&dimension_type_id=5&metric_id=22
+
+  [KPI-4] TOTAL DEBT MARKET COMPOSITION
+    GET /analytics/market-composition?financial_year=2025-26
+
+  [KPI-5] 10Y G-SEC ZERO YIELD
+    GET /analytics/aggregate
+      ?source_id=33&date_attribute_type_id=3&metric_id=160
+      &dimension_id=34092&granularity=month&aggregation=sum&limit=100
+
+  [KPI-6] SGB OUTSTANDING
+    GET /analytics/snapshot-data
+      ?source_id=6&date_attribute_type_id=6&dimension_type_id=10&metric_id=28
+
+  [CHT-1] Key Sovereign Rates  (4 calls)
+    Repo:     GET /analytics/aggregate?source_id=48&date_attribute_type_id=3&metric_id=180&dimension_type_id=67&dimension_id=34509&granularity=month&aggregation=sum&limit=500
+    1Y Zero:  GET /analytics_data/?source_id=49&dimension_id=34521&metric_id=181&limit=2000
+    5Y Zero:  GET /analytics_data/?source_id=49&dimension_id=34529&metric_id=181&limit=2000
+    10Y Zero: GET /analytics_data/?source_id=49&dimension_id=34539&metric_id=181&limit=2000
+
+  [CHT-2] Secondary Debt Trading — SEBI Corp Bond Trades
+    GET /analytics/aggregate
+      ?source_id=3&date_attribute_type_id=3&metric_id=6
+      &dimension_type_id=3&granularity=month&aggregation=sum&limit=500
+
+  [CHT-3] NSE WDM Traded Value  (7 dim_ids in one call)
+    GET /analytics/aggregate
+      ?source_id=54&date_attribute_type_id=11&metric_id=193
+      &dimension_type_id=77
+      &dimension_id=34800&dimension_id=34801&dimension_id=34802
+      &dimension_id=34803&dimension_id=34804&dimension_id=34805&dimension_id=34806
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-4] FBIL G-Sec Zero Curve  (25 parallel calls — one per tenor)
+    GET /analytics_data/?source_id=49&dimension_id=<DIM>&metric_id=181&limit=5
+    Tenors/dim_ids:
+      6M=34520 · 1Y=34521 · 1.5Y=34522 · 2Y=34523 · 3Y=34525 · 4Y=34527
+      5Y=34529 · 6Y=34531 · 7Y=34533 · 8Y=34535 · 9Y=34537 · 10Y=34539
+      11Y=34541 · 12Y=34543 · 13Y=34545 · 14Y=34547 · 15Y=34549
+      16Y=34551 · 17Y=34553 · 18Y=34555 · 19Y=34557 · 20Y=34559
+      25Y=34569 · 30Y=34579 · 40Y=34600
+
+  [CHT-5] CCIL ZCYC Model Pulse  (2 calls)
+    Beta0: GET /analytics/aggregate?source_id=51&date_attribute_type_id=3&metric_id=182&dimension_type_id=70&dimension_id=34620&granularity=day&aggregation=avg&limit=200
+    Beta1: GET /analytics/aggregate?source_id=51&date_attribute_type_id=3&metric_id=182&dimension_type_id=70&dimension_id=34621&granularity=day&aggregation=avg&limit=200
+
+  [CHT-6] G-Sec Auction Supply vs Cut-off Yield  (2 calls)
+    Amount: GET /analytics/aggregate?source_id=52&date_attribute_type_id=10&metric_id=184&dimension_type_id=71&granularity=financial_year&aggregation=sum&limit=100
+    Yield:  GET /analytics/aggregate?source_id=52&date_attribute_type_id=10&metric_id=186&dimension_type_id=71&granularity=financial_year&aggregation=avg&limit=100
+
+  [CHT-7] SDL Auction Supply and Clearing Yield  (2 calls)
+    Amount: GET /analytics/aggregate?source_id=53&date_attribute_type_id=10&metric_id=184&dimension_type_id=72&granularity=financial_year&aggregation=sum&limit=100
+    Yield:  GET /analytics/aggregate?source_id=53&date_attribute_type_id=10&metric_id=187&dimension_type_id=72&granularity=financial_year&aggregation=avg&limit=100
+
+  [CHT-8] Top SDL Auction Borrowers  (dynamic — N state calls)
+    Step 1: GET /dimensions/?dimension_type_id=72&skip=0&limit=100&is_active=true
+    Step 2: per state:
+      GET /analytics/aggregate
+        ?source_id=53&date_attribute_type_id=10&metric_id=184
+        &dimension_type_id=72&dimension_id=<state_dim_id>
+        &granularity=financial_year&aggregation=sum&limit=2
+
+  [CHT-9] NSE EBP Issuance Mix  (6 parallel calls)
+    GET /analytics/aggregate
+      ?source_id=10&date_attribute_type_id=7&metric_id=35
+      &dimension_type_id=73&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=500
+    dim_ids: 34783=NCD · 34786=Bond · 34787=Debenture · 34785=Bank Capital
+             34788=Structured · 34784=Other
+
+  [CHT-10] NSE WDM Security Mix  (7 parallel calls)
+    GET /analytics/aggregate
+      ?source_id=54&date_attribute_type_id=11&metric_id=193
+      &dimension_type_id=77&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=500
+    dim_ids: 34800=G-Sec · 34801=T-Bill · 34802=SDL · 34803=Corp Debt
+             34804=PTC · 34805=CP · 34806=Other
+
+  [CHT-11] RBI Policy Rates  (7 parallel calls — one per metric)
+    GET /analytics/aggregate
+      ?source_id=11&date_attribute_type_id=9&metric_id=<MET>
+      &granularity=month&aggregation=sum&limit=500
+    metric_ids: 46=Repo · 47=SDF · 48=MSF · 49=Bank Rate
+                50=Reverse Repo · 51=CRR · 52=SLR
+
+  ── SUB-TAB: G-SECS ──────────────────────────────────────────────────────────
+
+  [KPI-1] G-SEC WEIGHTED AVERAGE MATURITY
+    GET /analytics/snapshot-data
+      ?source_id=8&date_attribute_type_id=5&dimension_type_id=13&metric_id=29
+    Note: WAM computed from maturity dates in component
+
+  [KPI-2] STRIPS STOCK OUTSTANDING
+    GET /analytics/snapshot-data
+      ?source_id=9&date_attribute_type_id=5&dimension_type_id=15&metric_id=29
+
+  [KPI-3] STRIPS WEIGHTED AVERAGE MATURITY
+    GET /analytics/snapshot-data
+      ?source_id=9&date_attribute_type_id=5&dimension_type_id=15&metric_id=29
+
+  [CHT-1] G-Sec Maturity Ladder by FY
+    GET /analytics/snapshot-data
+      ?source_id=8&date_attribute_type_id=5&dimension_type_id=13&metric_id=29
+    Note: groups by maturity date financial year in component
+
+  [CHT-2] STRIPS Maturity Ladder by FY
+    GET /analytics/snapshot-data
+      ?source_id=9&date_attribute_type_id=5&dimension_type_id=15&metric_id=29
+
+  [CHT-3] G-Sec Maturity Profile (residual buckets)
+    GET /analytics/gsec/maturity-profile
+
+  [CHT-4] STRIPS Maturity Profile (residual buckets)
+    GET /analytics/gsec/strips/maturity-profile
+
+  [CHT-5] G-Sec Outstanding Annual Trend
+    GET /analytics/aggregate
+      ?source_id=8&date_attribute_type_id=5&metric_id=29
+      &dimension_type_id=14&granularity=financial_year&aggregation=sum&limit=100
+
+  [CHT-6] STRIPS Outstanding Annual Trend
+    GET /analytics/aggregate
+      ?source_id=9&date_attribute_type_id=5&metric_id=29
+      &dimension_type_id=15&granularity=financial_year&aggregation=sum&limit=100
+
+  [TBL-1] Top G-Sec Outstanding Lines
+    GET /analytics/snapshot-data
+      ?source_id=8&date_attribute_type_id=5&dimension_type_id=13&metric_id=29
+
+  [TBL-2] Top STRIPS Lines
+    GET /analytics/snapshot-data
+      ?source_id=9&date_attribute_type_id=5&dimension_type_id=16&metric_id=29
+
+  ── SUB-TAB: SGS ─────────────────────────────────────────────────────────────
+
+  [KPI-1] ARCHIVE STOCK (latest FY)
+    GET /analytics/aggregate
+      ?source_id=7&date_attribute_type_id=5&metric_id=29
+      &dimension_type_id=11&granularity=financial_year&aggregation=sum&limit=1
+
+  [KPI-2] ARCHIVE CAGR
+    GET /analytics/aggregate
+      ?source_id=7&date_attribute_type_id=5&metric_id=29
+      &dimension_type_id=11&granularity=financial_year&aggregation=sum&limit=100
+    Note: CAGR = (last/first)^(1/(n-1)) - 1 computed in API function
+
+  [KPI-3] TOP-5 STATE SHARE
+    GET /analytics/state-outstanding-share
+    Note: sorts by outstanding desc, sums top-5 share_percent in component
+
+  [CHT-1] SGS Annual Archive Trend
+    GET /analytics/aggregate
+      ?source_id=7&date_attribute_type_id=5&metric_id=29
+      &dimension_type_id=11&granularity=financial_year&aggregation=sum&limit=100
+
+  [CHT-2] SGS Per-State Annual Breakdown (dynamic top-5 share)
+    GET /analytics/aggregate
+      ?source_id=7&date_attribute_type_id=5&metric_id=29
+      &granularity=financial_year&aggregation=sum&limit=2000
+    Note: no dimension_type_id filter — returns one row per state per year
+
+  [CHT-3] SDL Annual Archive Trend
+    GET /analytics/sdl-archive/annual-trend
+
+  [CHT-4] Printed Coupon Stack
+    GET /analytics/sdl-archive/coupon-stack
+
+  [CHT-5] Archive Weighted Coupon Trend
+    GET /analytics/sdl-archive/weighted-coupon-trend
+
+  [CHT-6] Instrument Family Composition
+    GET /analytics/sdl-archive/instrument-composition
+
+  [CHT-7] SDL Maturity Profile (residual buckets)
+    GET /analytics/sdl/maturity-profile
+
+  [CHT-8] State-wise SDL Outstanding Share (map / bar)
+    GET /analytics/state-outstanding-share
+
+  [TBL-1] Annual Archive QA Signals
+    GET /analytics/sdl-archive/qa-signals
+
+  ── SUB-TAB: CORPORATE BONDS ─────────────────────────────────────────────────
+
+  [KPI-1] CORP BOND OUTSTANDING
+    GET /analytics/snapshot-data
+      ?source_id=5&date_attribute_type_id=3&dimension_type_id=5&metric_id=22
+
+  [CHT-1] Corp Bond Outstanding Monthly Trend
+    GET /analytics/aggregate
+      ?source_id=5&date_attribute_type_id=3&metric_id=22
+      &dimension_type_id=5&granularity=month&aggregation=sum&limit=500
+
+  [CHT-2] Corp Bond Trading Trend
+    GET /analytics/corp-bond/trading-trend
+
+  [CHT-3] Corp Bond Outstanding by Issuer Type
+    GET /analytics/corp-bond/outstanding-by-issuer
+
+  [CHT-4] NCD Public Issues Annual Trend
+    GET /analytics/aggregate
+      ?source_id=1&date_attribute_type_id=2&metric_id=2
+      &granularity=financial_year&aggregation=sum&limit=100
+
+  [CHT-5] Private Placements Annual Trend
+    GET /analytics/aggregate
+      ?source_id=2&date_attribute_type_id=3&metric_id=4
+      &granularity=financial_year&aggregation=sum&limit=100
+
+  [CHT-6] Private Placement Trend (dedicated)
+    GET /analytics/private-placement/yearly-trend
+
+  [CHT-7] NCD Public Issues Trend (dedicated)
+    GET /analytics/ncd/public-issues-trend
+
+  [CHT-8] Legacy Issuer Split — Financial vs Non-Financial
+    GET /analytics/corp-bond/legacy-issuer-split
+
+  [CHT-9] Current Issuer Split — Multi-category (post Apr 2024)
+    GET /analytics/corp-bond/current-issuer-split
+
+  ── SUB-TAB: SGB ─────────────────────────────────────────────────────────────
+
+  [KPI-1] SGB OUTSTANDING
+    GET /analytics/snapshot-data
+      ?source_id=6&date_attribute_type_id=6&dimension_type_id=10&metric_id=28
+
+  [CHT-1] SGB Outstanding Annual Trend
+    GET /analytics/aggregate
+      ?source_id=6&date_attribute_type_id=6&metric_id=28
+      &dimension_type_id=10&granularity=financial_year&aggregation=sum&limit=100
+
+  [TBL-1] Largest SGB Tranches  (2 snapshot calls merged)
+    Units:  GET /analytics/snapshot-data?source_id=6&date_attribute_type_id=6&dimension_type_id=6&metric_id=28
+    Price:  GET /analytics/snapshot-data?source_id=6&date_attribute_type_id=6&dimension_type_id=6&metric_id=24
+    Note: maturity_date = issue_date + 8 years, computed in component
+
+
+================================================================================
+  4. FPI TRACKER PAGE
+================================================================================
+
+  [CHT-1] Monthly FPI Net Flows  (bar ₹ Crore)
+    GET /analytics/aggregate
+      ?source_id=14&date_attribute_type_id=3&metric_id=87
+      &dimension_type_id=34&dimension_id=33894
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-2] Cumulative FPI Net Flow  (line USD Million)
+    GET /analytics/aggregate
+      ?source_id=14&date_attribute_type_id=3&metric_id=89
+      &dimension_type_id=34&dimension_id=33894
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-3] Annual FPI Performance  (bar ₹ Crore per calendar year)
+    GET /analytics/aggregate
+      ?source_id=14&date_attribute_type_id=3&metric_id=87
+      &dimension_type_id=34&dimension_id=33894
+      &granularity=year&aggregation=sum&limit=50
+
+  [CHT-4] FPI Assets Under Custody  (area ₹ Crore)
+    GET /analytics/aggregate
+      ?source_id=20&date_attribute_type_id=3&metric_id=98
+      &dimension_type_id=40&dimension_id=33925
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-5] FPI Share in NSE Cash Turnover  (line %)
+    GET /analytics/aggregate
+      ?source_id=16&date_attribute_type_id=3&metric_id=93
+      &dimension_type_id=37&dimension_id=33909
+      &granularity=month&aggregation=sum&limit=500
+
+
+================================================================================
+  5. DERIVATIVES PAGE
+================================================================================
+
+  [KPI-1] NSE TOTAL F&O CONTRACTS
+    GET /analytics/aggregate
+      ?source_id=27&date_attribute_type_id=3&metric_id=133
+      &dimension_type_id=47&dimension_id=33998
+      &granularity=month&aggregation=sum&limit=500
+
+  [KPI-2] OPTIONS % OF F&O  (5 calls)
+    GET /analytics/aggregate
+      ?source_id=27&date_attribute_type_id=3&metric_id=135
+      &dimension_type_id=47&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=500
+    dim_ids: 33994=Idx Opt · 33995=Stk Opt · 33996=Idx Opt(notl)
+             33997=Stk Opt(notl) · 33998=Total
+
+  [KPI-3] FPI DERIVATIVES SHARE
+    GET /analytics/aggregate
+      ?source_id=37&date_attribute_type_id=3&metric_id=93
+      &dimension_type_id=55&dimension_id=34163
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-1] Annual F&O Turnover NSE + BSE  (2 calls)
+    NSE: GET /analytics/aggregate?source_id=27&date_attribute_type_id=3&metric_id=133&dimension_type_id=47&dimension_id=33998&granularity=year&aggregation=sum&limit=50
+    BSE: GET /analytics/aggregate?source_id=29&date_attribute_type_id=3&metric_id=133&dimension_type_id=49&dimension_id=34008&granularity=year&aggregation=sum&limit=50
+
+  [CHT-2] Currency Derivatives Monthly Turnover
+    GET /analytics/aggregate
+      ?source_id=36&date_attribute_type_id=3&metric_id=117
+      &dimension_id=34169&granularity=month&aggregation=sum&limit=500
+
+  [CHT-3] Instrument Breakdown Notional Monthly  (6 parallel calls)
+    GET /analytics/aggregate
+      ?source_id=27&date_attribute_type_id=3&metric_id=117
+      &dimension_type_id=47&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=500
+    dim_ids: 33994=Idx Opt · 33995=Stk Opt · 33996=Idx Opt(notl)
+             33997=Stk Opt(notl) · 33993=Stk Fut · 33992=Idx Fut
+
+  [CHT-4] Segment Sheet  (same 6 calls as CHT-3)
+
+  [CHT-5] F&O 4-Panel Chart  (4 calls)
+    Contracts:    GET /analytics/aggregate?source_id=27&date_attribute_type_id=3&metric_id=133&dimension_type_id=47&dimension_id=33998&granularity=month&aggregation=sum&limit=500
+    Opt Premium:  GET /analytics/aggregate?source_id=27&date_attribute_type_id=3&metric_id=134&dimension_type_id=47&dimension_id=33998&granularity=month&aggregation=sum&limit=500
+    Stk Futures:  GET /analytics/aggregate?source_id=27&date_attribute_type_id=3&metric_id=117&dimension_type_id=47&dimension_id=33993&granularity=month&aggregation=sum&limit=500
+    Idx Futures:  GET /analytics/aggregate?source_id=27&date_attribute_type_id=3&metric_id=117&dimension_type_id=47&dimension_id=33992&granularity=month&aggregation=sum&limit=500
+
+  [CHT-6] Participation Mix FPI/DII/Client/NRI/Prop  (5 parallel calls)
+    GET /analytics/aggregate
+      ?source_id=37&date_attribute_type_id=3&metric_id=93
+      &dimension_type_id=55&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=500
+    dim_ids: 34163=FPI · 34164=Client · 34162=DII · 34166=Prop · 34165=NRI
+
+
+================================================================================
+  6. PRIMARY MARKETS PAGE
+================================================================================
+
+  [CHT-1] QIP Monthly Amount Raised
+    GET /analytics/aggregate
+      ?source_id=19&date_attribute_type_id=3&metric_id=96
+      &dimension_type_id=39&dimension_id=33924
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-2] QIP Monthly Issue Count
+    GET /analytics/aggregate
+      ?source_id=19&date_attribute_type_id=3&metric_id=95
+      &dimension_type_id=39&dimension_id=33924
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-3] Corp Debt Private Placements Monthly
+    GET /analytics/aggregate
+      ?source_id=44&date_attribute_type_id=3&metric_id=109
+      &dimension_id=34223&granularity=month&aggregation=sum&limit=500
+
+  [CHT-4] Preferential Allotments Monthly
+    GET /analytics/aggregate
+      ?source_id=43&date_attribute_type_id=3&metric_id=109
+      &dimension_id=34219&granularity=month&aggregation=sum&limit=500
+
+  [CHT-5] Takeover SAST Offers Monthly Count
+    GET /analytics/aggregate
+      ?source_id=42&date_attribute_type_id=3&metric_id=167
+      &dimension_id=34211&granularity=month&aggregation=sum&limit=500
+
+  [CHT-6] OFS Financial Sector Monthly
+    GET /analytics/aggregate
+      ?source_id=38&date_attribute_type_id=3&metric_id=175
+      &dimension_id=34360&granularity=month&aggregation=sum&limit=500
+
+  [CHT-7] OFS Non-Financial Sector Monthly
+    GET /analytics/aggregate
+      ?source_id=38&date_attribute_type_id=3&metric_id=177
+      &dimension_id=34360&granularity=month&aggregation=sum&limit=500
+
+
+================================================================================
+  7. MUTUAL FUNDS PAGE
+================================================================================
+
+  [CHT-1] SIP Contribution Monthly
+    GET /analytics/aggregate
+      ?source_id=55&date_attribute_type_id=12&metric_id=194
+      &dimension_type_id=78&dimension_id=34807
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-2] AUM Trend — Assets at End of Period
+    GET /analytics/aggregate
+      ?source_id=22&date_attribute_type_id=3&metric_id=109
+      &dimension_type_id=43&dimension_id=33960
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-3] Gross Mobilisation Total
+    GET /analytics/aggregate
+      ?source_id=22&date_attribute_type_id=3&metric_id=109
+      &dimension_type_id=43&dimension_id=33953
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-4] Gross Mobilisation Public Sector
+    GET /analytics/aggregate
+      ?source_id=22&date_attribute_type_id=3&metric_id=109
+      &dimension_type_id=43&dimension_id=33952
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-5] Gross Mobilisation Private Sector
+    GET /analytics/aggregate
+      ?source_id=22&date_attribute_type_id=3&metric_id=109
+      &dimension_type_id=43&dimension_id=33951
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-6] Net Inflow/Outflow Total
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=172
+      &dimension_type_id=64&dimension_id=34482
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-7] Equity Scheme AUM
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=173
+      &dimension_type_id=64&dimension_id=34454
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-8] Equity Scheme Net Flows
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=172
+      &dimension_id=34454&granularity=month&aggregation=sum&limit=500
+
+  [CHT-9] Hybrid Scheme Net Flows
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=172
+      &dimension_id=34461&granularity=month&aggregation=sum&limit=500
+
+  [CHT-10] Index Funds Net Flows
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=172
+      &dimension_id=34465&granularity=month&aggregation=sum&limit=500
+
+  [CHT-11] ETFs ex-Gold Net Flows
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=172
+      &dimension_id=34467&granularity=month&aggregation=sum&limit=500
+
+  [CHT-12] Gold ETF Net Flows
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=172
+      &dimension_id=34466&granularity=month&aggregation=sum&limit=500
+
+  [CHT-13] Top 10 Scheme Types by AUM  (9 parallel calls, limit 1 each)
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=173
+      &dimension_id=<DIM>&granularity=month&aggregation=sum&limit=1
+    dim_ids: 34467=Other ETFs · 34427=Liquid · 34451=Sectoral/Thematic
+             34453=Flexi Cap · 34446=Mid Cap · 34444=Large Cap
+             34447=Small Cap · 34445=Large&MidCap · 34465=Index Funds
+
+  [CHT-14] Net Inflows by Scheme Type Latest Month  (12 parallel calls, limit 2)
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=172
+      &dimension_id=<DIM>&granularity=month&aggregation=sum&limit=2
+    dim_ids: 34427=Liquid · 34430=Money Mkt · 34428=Ultra Short · 34426=Overnight
+             34467=Other ETFs · 34459=Arbitrage · 34429=Low Duration
+             34453=Flexi Cap · 34431=Short Duration · 34447=Small Cap
+             34436=Corp Bond · 34446=Mid Cap
+
+  [CHT-15] Legacy MF Summary Archive  (4 parallel calls, FY granularity)
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=173
+      &dimension_id=<DIM>&granularity=financial_year&aggregation=sum&limit=100
+    dim_ids: 34470=Open-ended · 34478=Close-ended · 34481=Interval · 34500=Total
+
+  [CHT-16] MF AUM Composition Equity/Debt/Hybrid  (3 parallel calls)
+    Equity: GET /analytics/aggregate?source_id=47&date_attribute_type_id=3&metric_id=173&dimension_id=34454&granularity=month&aggregation=sum&limit=500
+    Debt:   GET /analytics/aggregate?source_id=47&date_attribute_type_id=3&metric_id=173&dimension_id=34442&granularity=month&aggregation=sum&limit=500
+    Hybrid: GET /analytics/aggregate?source_id=47&date_attribute_type_id=3&metric_id=173&dimension_id=34461&granularity=month&aggregation=sum&limit=500
+
+  [CHT-17] AUM by Scheme Category Donut  (5 parallel calls, limit 1)
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=173
+      &dimension_id=<DIM>&granularity=month&aggregation=sum&limit=1
+    dim_ids: 34454=Equity · 34461=Hybrid · 34442=Debt · 34464=Solution · 34469=Other
+
+  [CHT-18] Debt Scheme AUM
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=173
+      &dimension_type_id=64&dimension_id=34442
+      &granularity=month&aggregation=sum&limit=500
+
+
+================================================================================
+  8. WEALTH MANAGEMENT PAGE
+================================================================================
+
+  [CHT-1] PM Grand Total AUM
+    GET /analytics/aggregate
+      ?source_id=46&date_attribute_type_id=3&metric_id=178
+      &dimension_type_id=66&dimension_id=34425
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-2] PM Discretionary AUM
+    GET /analytics/aggregate
+      ?source_id=46&date_attribute_type_id=3&metric_id=178
+      &dimension_type_id=66&dimension_id=34417
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-3] AUM by Asset Class  (12 parallel calls, limit 2 each)
+    GET /analytics/aggregate
+      ?source_id=46&date_attribute_type_id=3&metric_id=178
+      &dimension_type_id=66&dimension_id=<D1>&dimension_id=<D2>...
+      &granularity=month&aggregation=sum&limit=2
+    Groups:
+      Plain Debt Listed      : 34381,34382,34383,34384
+      EPFO/PF                : 34421,34422,34808,34809
+      Non EPFO/PF            : 34423,34424,34810,34811
+      Listed Equity          : 34375,34376,34377,34378
+      Mutual Funds           : 34409,34410,34411,34412
+      Plain Debt Unlisted    : 34385,34386,34387,34388
+      Others                 : 34413,34414,34415,34416
+      Structured Debt Listed : 34389,34390,34391,34392
+      Unlisted Equity        : 34378,34379,34380,34812
+      Derivatives-Equity     : 34397,34398,34399,34400
+      Structured Debt Unlist : 34393,34394,34395,34396
+      Derivatives-Others     : 34405,34406,34407,34408
+
+  [CHT-4] Custodian AUC — FPI vs FDI  (2 calls)
+    FPI: GET /analytics/aggregate?source_id=20&date_attribute_type_id=3&metric_id=98&dimension_type_id=40&dimension_id=33925&granularity=month&aggregation=sum&limit=500
+    FDI: GET /analytics/aggregate?source_id=20&date_attribute_type_id=3&metric_id=98&dimension_type_id=40&dimension_id=33927&granularity=month&aggregation=sum&limit=500
+
+  [CHT-5] Foreign VC Sectoral Allocation  (8 parallel calls)
+    GET /analytics/aggregate
+      ?source_id=26&date_attribute_type_id=3&metric_id=131
+      &dimension_type_id=46&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=24
+    dim_ids: 33983=IT · 33984=Telecom · 33985=Pharma · 33986=Biotech
+             33987=Media · 33988=Services · 33989=Industrial · 33990=Others
+
+  [CHT-6] PMS Service Mix  (3 parallel calls, limit 2)
+    GET /analytics/aggregate
+      ?source_id=46&date_attribute_type_id=3&metric_id=178
+      &dimension_type_id=66&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=2
+    dim_ids: 34417=Discretionary · 34418=Non-discretionary · 34420=Advisory
+
+  [CHT-7] PMS Total AUM Trend
+    GET /analytics/aggregate
+      ?source_id=46&date_attribute_type_id=3&metric_id=178
+      &dimension_type_id=66&dimension_id=34425
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-8] PMS Total Clients Trend  (4 parallel calls summed per period)
+    GET /analytics/aggregate
+      ?source_id=46&date_attribute_type_id=3&metric_id=178
+      &dimension_type_id=66&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=500
+    dim_ids: 34370=Discretionary · 34371=Non-Discr · 34372=Co-Investment · 34373=Advisory
+
+  [CHT-9] PM Number of Clients  (same 4 parallel calls as CHT-8)
+
+
+================================================================================
+  9. ODI / P-NOTES TRACKER PAGE
+================================================================================
+
+  All 4 charts share: source_id=28 · date_attribute_type_id=3
+                      dimension_type_id=48 · dimension_id=34000
+                      granularity=month · aggregation=sum · limit=500
+
+  [CHT-1] ODI Notional Including Derivatives
+    GET /analytics/aggregate?source_id=28&date_attribute_type_id=3&metric_id=138&dimension_type_id=48&dimension_id=34000&granularity=month&aggregation=sum&limit=500
+
+  [CHT-2] ODI Notional Excluding Derivatives
+    GET /analytics/aggregate?source_id=28&date_attribute_type_id=3&metric_id=139&dimension_type_id=48&dimension_id=34000&granularity=month&aggregation=sum&limit=500
+
+  [CHT-3] ODI as % of FPI AUC  (SEBI threshold = 10%)
+    GET /analytics/aggregate?source_id=28&date_attribute_type_id=3&metric_id=141&dimension_type_id=48&dimension_id=34000&granularity=month&aggregation=sum&limit=500
+
+  [CHT-4] FPI AUC (from ODI source)
+    GET /analytics/aggregate?source_id=28&date_attribute_type_id=3&metric_id=140&dimension_type_id=48&dimension_id=34000&granularity=month&aggregation=sum&limit=500
+
+
+================================================================================
+  10. COMMODITY MARKETS PAGE
+================================================================================
+
+  [KPI+CHT] MCX iCOMDEX Composite Open Price
+    GET /analytics/aggregate
+      ?source_id=21&date_attribute_type_id=3&metric_id=99
+      &dimension_type_id=41&dimension_id=33941
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-1] MCX Futures Turnover by Group  (4 parallel calls)
+    GET /analytics/aggregate
+      ?source_id=30&date_attribute_type_id=3&metric_id=117
+      &dimension_type_id=50&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=1000
+    dim_ids: 34009=Agriculture · 34010=Bullion · 34011=Metals · 34012=Energy
+
+  [CHT-2] Commodity Exchanges 2026 Snapshot  (8 calls: 4 exchanges × 2 metrics)
+    metric_id=117 (turnover) and metric_id=166 (contracts) per exchange:
+    MCX:   source=30 · dim_type=50 · dim=34016
+    NCDEX: source=39 · dim_type=58 · dim=34180
+    NSE:   source=41 · dim_type=60 · dim=34201
+    BSE:   source=40 · dim_type=59 · dim=34190
+    Pattern: GET /analytics/aggregate?source_id=<S>&date_attribute_type_id=3&metric_id=<M>&dimension_type_id=<DT>&dimension_id=<D>&granularity=month&aggregation=sum&limit=500
+
+  [CHT-3] Exchange Market Share 2026  (4 calls, metric_id=117 only)
+    Same 4 exchange configs as CHT-2 above
+
+  [CHT-4] MCX iCOMDEX Composite Close YoY
+    GET /analytics/aggregate
+      ?source_id=21&date_attribute_type_id=3&metric_id=102
+      &dimension_type_id=41&dimension_id=33941
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-5] MCX BULLDEX Close
+    GET /analytics/aggregate
+      ?source_id=21&date_attribute_type_id=3&metric_id=102
+      &dimension_type_id=41&dimension_id=33942
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-6] MCX ENRGDEX Close
+    GET /analytics/aggregate
+      ?source_id=21&date_attribute_type_id=3&metric_id=102
+      &dimension_type_id=41&dimension_id=33944
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-7] MCX METLDEX Close
+    GET /analytics/aggregate
+      ?source_id=21&date_attribute_type_id=3&metric_id=102
+      &dimension_type_id=41&dimension_id=33943
+      &granularity=month&aggregation=sum&limit=500
+
+
+================================================================================
+  11. INTERMEDIARIES PAGE
+================================================================================
+
+  [CHT-1] AIF Registered Count
+    GET /analytics/aggregate
+      ?source_id=31&date_attribute_type_id=3&metric_id=143
+      &dimension_type_id=51&dimension_id=34071
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-2] FPI Registered Count
+    GET /analytics/aggregate
+      ?source_id=31&date_attribute_type_id=3&metric_id=143
+      &dimension_type_id=51&dimension_id=34053
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-3] Intermediary Trends — 7 categories  (7 parallel calls)
+    GET /analytics/aggregate
+      ?source_id=31&date_attribute_type_id=3&metric_id=143
+      &dimension_type_id=51&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=500
+    dim_ids: 34071=AIF · 34053=FPI · 34072=PM · 34075=RA · 34073=MF
+             34076=InvIT · 34077=REIT
+
+  [CHT-4] Clearing House Funds Pay-in NSCCL + ICCL  (2 calls)
+    NSCCL: GET /analytics/aggregate?source_id=24&date_attribute_type_id=3&metric_id=126&dimension_type_id=45&dimension_id=33981&granularity=financial_year&aggregation=sum&limit=100
+    ICCL:  GET /analytics/aggregate?source_id=25&date_attribute_type_id=3&metric_id=126&dimension_type_id=45&dimension_id=33982&granularity=financial_year&aggregation=sum&limit=100
+
+  [CHT-5] Demat Account Growth CDSL vs NSDL  (2 calls)
+    CDSL: GET /analytics/aggregate?source_id=32&date_attribute_type_id=3&metric_id=147&dimension_type_id=52&dimension_id=34086&granularity=month&aggregation=sum&limit=2000
+    NSDL: GET /analytics/aggregate?source_id=32&date_attribute_type_id=3&metric_id=147&dimension_type_id=52&dimension_id=34085&granularity=month&aggregation=sum&limit=2000
+    Note: values in lakh ÷100 = Crore
+
+
+================================================================================
+  12. MACRO INDICATORS PAGE
+================================================================================
+
+  All calls share: source_id=33 · date_attribute_type_id=3
+                   metric_id=160 · dimension_type_id=53
+                   granularity=month · aggregation=sum · limit=500
+
+  [CHT-1] Repo Rate / Call Money Rates
+    GET /analytics/aggregate?source_id=33&date_attribute_type_id=3&metric_id=160&dimension_type_id=53&dimension_id=34089&granularity=month&aggregation=sum&limit=500
+
+  [CHT-2] Key Macro Indicators — 8-toggle  (8 parallel calls)
+    GET /analytics/aggregate
+      ?source_id=33&date_attribute_type_id=3&metric_id=160
+      &dimension_type_id=53&dimension_id=<DIM>&granularity=month&aggregation=sum&limit=500
+    dim_ids:
+      34096=Repo Rate · 34088=CPI Inflation · 34117=WPI Inflation
+      34095=Forex Reserves · 34093=USD/INR · 34103=M3 Money Supply
+      34146=FPI Net Equity · 34130=NSE MCap
+
+  [CHT-3] Inflation CPI & WPI  (2 calls)
+    CPI: dim_id=34088   WPI: dim_id=34117
+
+  [CHT-4] Trade Balance
+    dim_id=34094
+
+  [CHT-5] Market Cap / GDP Ratio
+    dim_id=34118
+
+  [CHT-6] Manufacturing PMI
+    dim_id=34111
+
+  [CHT-7] USD / INR Spot Rate
+    dim_id=34093
+
+  [CHT-8] Forex Reserves
+    dim_id=34095
+
+  (All CHT-3 through CHT-8 use the same base pattern as CHT-2)
+
+
+================================================================================
+  13. INSIGHTS PAGE
+================================================================================
+
+  ── KPI CARDS ────────────────────────────────────────────────────────────────
+
+  [KPI-1] NSE MARKET CAP (latest)
+    GET /analytics/aggregate
+      ?source_id=33&date_attribute_type_id=3&metric_id=160
+      &dimension_type_id=53&dimension_id=34130
+      &granularity=month&aggregation=sum&limit=500
+
+  [KPI-2] 10Y G-SEC YIELD
+    GET /analytics/aggregate
+      ?source_id=33&date_attribute_type_id=3&metric_id=160
+      &dimension_type_id=53&dimension_id=34092
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-3] LATEST FPI NET INVESTMENT
+    GET /analytics/aggregate
+      ?source_id=33&date_attribute_type_id=3&metric_id=160
+      &dimension_type_id=53&dimension_id=34146
+      &granularity=month&aggregation=sum&limit=1
+
+  [KPI-4] DEMAT ACCOUNTS
+    GET /analytics/aggregate
+      ?source_id=33&date_attribute_type_id=3&metric_id=160
+      &dimension_type_id=53&dimension_id=34144
+      &granularity=month&aggregation=sum&limit=1
+
+  ── CHARTS ───────────────────────────────────────────────────────────────────
+
+  [CHT-1] Market Plumbing & Concentration Risk  (3 calls)
+    Top-10 Members:    GET /analytics/aggregate?source_id=17&date_attribute_type_id=3&metric_id=105&dimension_type_id=42&dimension_id=33949&granularity=month&aggregation=sum&limit=500
+    Top-25 Securities: GET /analytics/aggregate?source_id=17&date_attribute_type_id=3&metric_id=106&dimension_type_id=42&dimension_id=33946&granularity=month&aggregation=sum&limit=500
+    Traded/List Ratio: GET /analytics/aggregate?source_id=34&date_attribute_type_id=3&metric_id=161&dimension_id=34160&granularity=month&aggregation=sum&limit=500
+
+  [CHT-2] Derivatives Concentration Monitor  (5 calls, granularity=year)
+    Total F&O:  GET /analytics/aggregate?source_id=27&date_attribute_type_id=3&metric_id=117&dimension_type_id=47&dimension_id=33998&granularity=year&aggregation=sum&limit=50
+    Idx Calls:  GET /analytics/aggregate?source_id=27&date_attribute_type_id=3&metric_id=135&dimension_type_id=47&dimension_id=33994&granularity=year&aggregation=sum&limit=50
+    Idx Puts:   GET /analytics/aggregate?source_id=27&date_attribute_type_id=3&metric_id=135&dimension_type_id=47&dimension_id=33995&granularity=year&aggregation=sum&limit=50
+    Stk Calls:  GET /analytics/aggregate?source_id=27&date_attribute_type_id=3&metric_id=135&dimension_type_id=47&dimension_id=33996&granularity=year&aggregation=sum&limit=50
+    Stk Puts:   GET /analytics/aggregate?source_id=27&date_attribute_type_id=3&metric_id=135&dimension_type_id=47&dimension_id=33997&granularity=year&aggregation=sum&limit=50
+
+  [CHT-3] Market Risk & External Vulnerability  (3 calls)
+    India VIX: GET /analytics/aggregate?source_id=33&date_attribute_type_id=3&metric_id=160&dimension_type_id=53&dimension_id=34128&granularity=month&aggregation=sum&limit=500
+    A/D Ratio: GET /analytics/aggregate?source_id=15&date_attribute_type_id=3&metric_id=92&dimension_type_id=36&dimension_id=33906&granularity=month&aggregation=sum&limit=500
+    FPI Net:   GET /analytics/aggregate?source_id=14&date_attribute_type_id=3&metric_id=87&dimension_type_id=34&dimension_id=33894&granularity=month&aggregation=sum&limit=500
+
+  [CHT-4] Macro-Market Transmission Map  (4 calls)
+    Repo Rate: GET /analytics/aggregate?source_id=33&date_attribute_type_id=3&metric_id=160&dimension_type_id=53&dimension_id=34089&granularity=month&aggregation=sum&limit=500
+    USD/INR:   GET /analytics/aggregate?source_id=33&date_attribute_type_id=3&metric_id=160&dimension_type_id=53&dimension_id=34093&granularity=month&aggregation=sum&limit=500
+    NSE MCap:  GET /analytics/aggregate?source_id=33&date_attribute_type_id=3&metric_id=160&dimension_type_id=53&dimension_id=34130&granularity=month&aggregation=sum&limit=500
+    FPI Net:   GET /analytics/aggregate?source_id=14&date_attribute_type_id=3&metric_id=87&dimension_type_id=34&dimension_id=33894&granularity=month&aggregation=sum&limit=500
+
+  [CHT-5] State Debt Stock Archive SGS  (2 calls)
+    SGS Trend: GET /analytics/aggregate?source_id=7&date_attribute_type_id=5&metric_id=29&dimension_type_id=11&granularity=financial_year&aggregation=sum&limit=100
+    Top-5:     GET /analytics/state-outstanding-share
+
+  [CHT-6] Largest 5-Year State Debt Additions
+    GET /analytics/state-outstanding-share
+
+  [CHT-7] Sovereign/State/Credit Funding Conditions  (5 calls, FY)
+    G-Sec OS:  GET /analytics/aggregate?source_id=8&date_attribute_type_id=5&metric_id=29&dimension_type_id=14&granularity=financial_year&aggregation=sum&limit=100
+    SDL OS:    GET /analytics/aggregate?source_id=7&date_attribute_type_id=5&metric_id=29&dimension_type_id=11&granularity=financial_year&aggregation=sum&limit=100
+    EBP/Corp:  GET /analytics/aggregate?source_id=2&date_attribute_type_id=3&metric_id=4&granularity=financial_year&aggregation=sum&limit=100
+    G-Sec Yld: GET /analytics/aggregate?source_id=33&date_attribute_type_id=3&metric_id=160&dimension_type_id=53&dimension_id=34092&granularity=financial_year&aggregation=avg&limit=100
+    SDL Yield: GET /analytics/aggregate?source_id=33&date_attribute_type_id=3&metric_id=160&dimension_type_id=53&dimension_id=34091&granularity=financial_year&aggregation=avg&limit=100
+
+  [CHT-8] Capital Formation Engine  (5 calls, FY)
+    SEBI PP:   GET /analytics/aggregate?source_id=2&date_attribute_type_id=3&metric_id=4&granularity=financial_year&aggregation=sum&limit=100
+    QIP:       GET /analytics/aggregate?source_id=19&date_attribute_type_id=3&metric_id=96&dimension_type_id=39&dimension_id=33924&granularity=financial_year&aggregation=sum&limit=100
+    NCD IPO:   GET /analytics/aggregate?source_id=1&date_attribute_type_id=2&metric_id=2&granularity=financial_year&aggregation=sum&limit=100
+    OFS Fin:   GET /analytics/aggregate?source_id=38&date_attribute_type_id=3&metric_id=175&dimension_id=34360&granularity=financial_year&aggregation=sum&limit=100
+    OFS NonF:  GET /analytics/aggregate?source_id=38&date_attribute_type_id=3&metric_id=177&dimension_id=34360&granularity=financial_year&aggregation=sum&limit=100
+
+  [CHT-9] Debt Market Stock G-Sec + SGS + Corp  (3 snapshot calls)
+    G-Sec: GET /analytics/snapshot-data?source_id=8&date_attribute_type_id=5&dimension_type_id=14&metric_id=29
+    SGS:   GET /analytics/snapshot-data?source_id=7&date_attribute_type_id=5&dimension_type_id=11&metric_id=29
+    Corp:  GET /analytics/snapshot-data?source_id=5&date_attribute_type_id=3&dimension_type_id=5&metric_id=22
+
+  [CHT-10] Mutual Fund AUM Full Series
+    GET /analytics/aggregate
+      ?source_id=47&date_attribute_type_id=3&metric_id=173
+      &dimension_type_id=64&dimension_id=34482
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-11] PMS AUM Full Series
+    GET /analytics/aggregate
+      ?source_id=46&date_attribute_type_id=3&metric_id=178
+      &dimension_type_id=66&dimension_id=34425
+      &granularity=month&aggregation=sum&limit=500
+
+  [CHT-12] Demat Accounts Trend CDSL + NSDL  (2 calls summed)
+    CDSL: GET /analytics/aggregate?source_id=32&date_attribute_type_id=3&metric_id=147&dimension_type_id=52&dimension_id=34086&granularity=month&aggregation=sum&limit=500
+    NSDL: GET /analytics/aggregate?source_id=32&date_attribute_type_id=3&metric_id=147&dimension_type_id=52&dimension_id=34085&granularity=month&aggregation=sum&limit=500
+
+
+================================================================================
+  DEDICATED ENDPOINT SUMMARY  (no query params)
+================================================================================
+  GET /analytics/market-composition?financial_year=2025-26
+  GET /analytics/corp-bond/outstanding-by-issuer
+  GET /analytics/corp-bond/trading-trend
+  GET /analytics/corp-bond/legacy-issuer-split
+  GET /analytics/corp-bond/current-issuer-split
+  GET /analytics/private-placement/yearly-trend
+  GET /analytics/ncd/public-issues-trend
+  GET /analytics/gsec/maturity-profile
+  GET /analytics/gsec/strips/maturity-profile
+  GET /analytics/sdl/maturity-profile
+  GET /analytics/sdl-archive/annual-trend
+  GET /analytics/sdl-archive/coupon-stack
+  GET /analytics/sdl-archive/weighted-coupon-trend
+  GET /analytics/sdl-archive/instrument-composition
+  GET /analytics/sdl-archive/qa-signals
+  GET /analytics/state-outstanding-share
+================================================================================
