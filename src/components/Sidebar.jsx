@@ -4,20 +4,20 @@ import { applyTheme, getSavedTheme } from '../lib/theme';
 
 /* ─── Search pages list ───────────────────────────────────── */
 const PAGES_LIST = [
-  { id:'overview', label:'Overview',          desc:'Indian Capital Markets summary'              },
-  { id:'mp',       label:'Market Pulse',       desc:'NSE & BSE equity cash markets'               },
-  { id:'dm',       label:'Debt Markets',       desc:'G-Sec curves, debt issuance, bond trading'   },
-  { id:'fpi',      label:'FPI Tracker',        desc:'Foreign Portfolio Investment flows'           },
-  { id:'deriv',    label:'Derivatives',        desc:'Equity F&O & Currency derivatives'           },
-  { id:'prim',     label:'Primary Markets',    desc:'QIP & IPO fundraising activities'            },
-  { id:'mf',       label:'Mutual Funds',       desc:'AMFI AUM, SIP flows, fund categories'        },
-  { id:'wm',       label:'Wealth Management',  desc:'PMS & AIF, HNI portfolio trends'             },
-  { id:'odi',      label:'ODI & P-Notes',      desc:'Offshore derivative instruments'             },
-  { id:'comm',     label:'Commodity Markets',  desc:'MCX metals, energy & agri futures'           },
-  { id:'im',       label:'Intermediaries',     desc:'Brokers, depositories, clearing houses'      },
-  { id:'macro',    label:'Macro Indicators',   desc:'Repo rate, forex, inflation, PMI'            },
-  { id:'insights', label:'Insights',           desc:'Capital Markets Command Center'              },
-  { id:'dash',     label:'Dashboard',          desc:'Executive overview & KPIs'                   },
+  // { id:'overview', label:'Overview',          desc:'Indian Capital Markets summary'              },
+  // { id:'mp',       label:'Market Pulse',       desc:'NSE & BSE equity cash markets'               },
+  // { id:'dm',       label:'Debt Markets',       desc:'G-Sec curves, debt issuance, bond trading'   },
+  // { id:'fpi',      label:'FPI Tracker',        desc:'Foreign Portfolio Investment flows'           },
+  // { id:'deriv',    label:'Derivatives',        desc:'Equity F&O & Currency derivatives'           },
+  // { id:'prim',     label:'Primary Markets',    desc:'QIP & IPO fundraising activities'            },
+  // { id:'mf',       label:'Mutual Funds',       desc:'AMFI AUM, SIP flows, fund categories'        },
+  // { id:'wm',       label:'Wealth Management',  desc:'PMS & AIF, HNI portfolio trends'             },
+  // { id:'odi',      label:'ODI & P-Notes',      desc:'Offshore derivative instruments'             },
+  // { id:'comm',     label:'Commodity Markets',  desc:'MCX metals, energy & agri futures'           },
+  // { id:'im',       label:'Intermediaries',     desc:'Brokers, depositories, clearing houses'      },
+  // { id:'macro',    label:'Macro Indicators',   desc:'Repo rate, forex, inflation, PMI'            },
+  // { id:'insights', label:'Insights',           desc:'Capital Markets Command Center'              },
+  // { id:'dash',     label:'Dashboard',          desc:'Executive overview & KPIs'                   },
   { id:'catalog',  label:'Dataset Catalog',    desc:'Browse all available datasets'               },
 ];
 
@@ -153,77 +153,77 @@ export default function Sidebar({ mobileNavOpen, onMobileNavClose, activePage })
       {/* ── Nav items ── */}
       <div className="sb-nav">
 
-        <div className="sb-item" id="sni-overview" onClick={() => navTo('overview')} onMouseEnter={e => showTip(e,'Overview')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-overview" onClick={() => navTo('overview')} onMouseEnter={e => showTip(e,'Overview')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
           <span className="sb-item-label">Overview</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-mp" onClick={() => navTo('mp')} onMouseEnter={e => showTip(e,'Market Pulse')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-mp" onClick={() => navTo('mp')} onMouseEnter={e => showTip(e,'Market Pulse')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           <span className="sb-item-label">Market Pulse</span>
           <span className="sb-badge sb-badge-teal">NSE/BSE</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-dm" onClick={() => navTo('dm')} onMouseEnter={e => showTip(e,'Debt Markets')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-dm" onClick={() => navTo('dm')} onMouseEnter={e => showTip(e,'Debt Markets')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="4" rx="1"/><path d="M3 10h18M3 17h18"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="14" r="1" fill="currentColor"/></svg>
           <span className="sb-item-label">Debt Markets</span>
           <span className="sb-badge sb-badge-blue">BONDS</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-fpi" onClick={() => navTo('fpi')} onMouseEnter={e => showTip(e,'FPI Tracker')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-fpi" onClick={() => navTo('fpi')} onMouseEnter={e => showTip(e,'FPI Tracker')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
           <span className="sb-item-label">FPI Tracker</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-deriv" onClick={() => navTo('deriv')} onMouseEnter={e => showTip(e,'Derivatives')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-deriv" onClick={() => navTo('deriv')} onMouseEnter={e => showTip(e,'Derivatives')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
           <span className="sb-item-label">Derivatives</span>
           <span className="sb-badge sb-badge-amber">F&O</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-prim" onClick={() => navTo('prim')} onMouseEnter={e => showTip(e,'Primary Markets')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-prim" onClick={() => navTo('prim')} onMouseEnter={e => showTip(e,'Primary Markets')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
           <span className="sb-item-label">Primary Markets</span>
           <span className="sb-badge sb-badge-blue">QIP/IPO</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-mf" onClick={() => navTo('mf')} onMouseEnter={e => showTip(e,'Mutual Funds')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-mf" onClick={() => navTo('mf')} onMouseEnter={e => showTip(e,'Mutual Funds')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
           <span className="sb-item-label">Mutual Funds</span>
           <span className="sb-badge sb-badge-purple">AUM</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-wm" onClick={() => navTo('wm')} onMouseEnter={e => showTip(e,'Wealth Management')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-wm" onClick={() => navTo('wm')} onMouseEnter={e => showTip(e,'Wealth Management')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
           <span className="sb-item-label">Wealth Mgmt</span>
           <span className="sb-badge sb-badge-green">PM/AUM</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-odi" onClick={() => navTo('odi')} onMouseEnter={e => showTip(e,'ODI & P-Notes')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-odi" onClick={() => navTo('odi')} onMouseEnter={e => showTip(e,'ODI & P-Notes')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
           <span className="sb-item-label">ODI &amp; P-Notes</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-comm" onClick={() => navTo('comm')} onMouseEnter={e => showTip(e,'Commodity Markets')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-comm" onClick={() => navTo('comm')} onMouseEnter={e => showTip(e,'Commodity Markets')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           <span className="sb-item-label">Commodity Markets</span>
           <span className="sb-badge sb-badge-orange">MCX</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-im" onClick={() => navTo('im')} onMouseEnter={e => showTip(e,'Intermediaries')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-im" onClick={() => navTo('im')} onMouseEnter={e => showTip(e,'Intermediaries')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span className="sb-item-label">Intermediaries</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-macro" onClick={() => navTo('macro')} onMouseEnter={e => showTip(e,'Macro Indicators')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-macro" onClick={() => navTo('macro')} onMouseEnter={e => showTip(e,'Macro Indicators')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           <span className="sb-item-label">Macro Indicators</span>
-        </div>
+        </div> */}
 
-        <div className="sb-item" id="sni-insights" onClick={() => navTo('insights')} onMouseEnter={e => showTip(e,'Insights')} onMouseLeave={hideTip}>
+        {/* <div className="sb-item" id="sni-insights" onClick={() => navTo('insights')} onMouseEnter={e => showTip(e,'Insights')} onMouseLeave={hideTip}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span className="sb-item-label">Insights</span>
-        </div>
+        </div> */}
 
         {/* <div className="sb-item" id="sni-dash" onClick={() => navTo('dash')}>
           <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>

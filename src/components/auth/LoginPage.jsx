@@ -266,14 +266,14 @@ export default function LoginPage({ onLogin }) {
           </form>
 
           {/* Divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+          {/* <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
             <span style={{ fontSize: 12, color: '#3a5070' }}>or</span>
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-          </div>
+          </div> */}
 
           {/* Google sign-in */}
-          <button
+          {/* <button
             type="button"
             onClick={handleGoogleSignIn}
             style={{
@@ -294,7 +294,7 @@ export default function LoginPage({ onLogin }) {
               <path fill="none" d="M0 0h48v48H0z"/>
             </svg>
             Continue with Google
-          </button>
+          </button> */}
 
           <p style={{ textAlign: 'center', fontSize: 12, color: '#3a5070', marginTop: 24 }}>
             Secure access · Session expires after inactivity

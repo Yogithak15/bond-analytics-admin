@@ -5,28 +5,28 @@ import { authClient } from './lib/auth-client';
 import LoginPage from './components/auth/LoginPage';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
-import DashboardPage from './components/dashboard/DashboardPage';
+// import DashboardPage from './components/dashboard/DashboardPage';
 import CatalogPage from './components/catalog/CatalogPage';
-import OverviewPage from './components/overview/OverviewPage';
-import MarketPulsePage from './components/marketpulse/MarketPulsePage';
-import DebtMarketsPage from './components/debtmarket/DebtMarketsPage';
-import FpiTrackerPage from './components/fpitracker/FpiTrackerPage';
-import DerivativesPage from './components/derivatives/DerivativesPage';
-import PrimaryMarketsPage from './components/primarymarkets/PrimaryMarketsPage';
-import MutualFundsPage from './components/mutualfunds/MutualFundsPage';
-import WealthManagementPage from './components/wealthmanagement/WealthManagementPage';
-import ODIPNotesPage from './components/oditracker/ODIPNotesPage';
-import CommodityMarketsPage from './components/commodity/CommodityMarketsPage';
-import IntermediariesPage from './components/intermediaries/IntermediariesPage';
-import MacroIndicatorsPage from './components/macroindicators/MacroIndicatorsPage';
-import InsightsPage from './components/insights/InsightsPage';
+// import OverviewPage from './components/overview/OverviewPage';
+// import MarketPulsePage from './components/marketpulse/MarketPulsePage';
+// import DebtMarketsPage from './components/debtmarket/DebtMarketsPage';
+// import FpiTrackerPage from './components/fpitracker/FpiTrackerPage';
+// import DerivativesPage from './components/derivatives/DerivativesPage';
+// import PrimaryMarketsPage from './components/primarymarkets/PrimaryMarketsPage';
+// import MutualFundsPage from './components/mutualfunds/MutualFundsPage';
+// import WealthManagementPage from './components/wealthmanagement/WealthManagementPage';
+// import ODIPNotesPage from './components/oditracker/ODIPNotesPage';
+// import CommodityMarketsPage from './components/commodity/CommodityMarketsPage';
+// import IntermediariesPage from './components/intermediaries/IntermediariesPage';
+// import MacroIndicatorsPage from './components/macroindicators/MacroIndicatorsPage';
+// import InsightsPage from './components/insights/InsightsPage';
 import DatasetDetailPage from './components/detail/DatasetDetailPage';
-import FiltersPanel from './components/panels/FiltersPanel';
-import PivotPanel from './components/panels/PivotPanel';
-import ComparePanel from './components/panels/ComparePanel';
-import WatchlistPanel from './components/panels/WatchlistPanel';
+// import FiltersPanel from './components/panels/FiltersPanel';
+// import PivotPanel from './components/panels/PivotPanel';
+// import ComparePanel from './components/panels/ComparePanel';
+// import WatchlistPanel from './components/panels/WatchlistPanel';
 import SourceUrlsModal from './components/SourceUrlsModal';
-import IndiaMap from './components/IndiaMap';
+// import IndiaMap from './components/IndiaMap';
 
 window.echarts = echarts;
 
@@ -46,15 +46,15 @@ function loadScript(src) {
 function getInitialPage() {
   const rawHash = window.location.hash.replace('#', '');
   const hash    = rawHash === 'dashboard' ? 'dash' : rawHash;
-  const valid   = ['overview', 'mp', 'dm', 'fpi', 'deriv', 'prim', 'mf', 'wm', 'odi', 'comm', 'im', 'macro', 'insights', 'dash', 'catalog', 'detail', 'ref'];
-  const start   = valid.includes(hash) ? hash : 'overview';
-  return start === 'detail' ? 'dash' : start;
+  const valid   = ['catalog', 'detail'];
+  const start   = valid.includes(hash) ? hash : 'catalog';
+  return start === 'detail' ? 'catalog' : start;
 }
 
 export default function App() {
   const { data: session, isPending: sessionLoading } = authClient.useSession();
-  const [mapTarget, setMapTarget]       = useState(null);
-  const [sgsMapTarget, setSgsMapTarget] = useState(null);
+  // const [mapTarget, setMapTarget]       = useState(null);
+  // const [sgsMapTarget, setSgsMapTarget] = useState(null);
   const [isDark, setIsDark]             = useState(() => {
     try { return localStorage.getItem('bb-color-theme') !== 'light'; } catch { return true; }
   });
@@ -64,7 +64,7 @@ export default function App() {
   const booted = useRef(false);
   // Lazy-mount: track which pages have ever been visited so we only mount them on first use.
   // 'dm' is pre-seeded because its DOM elements (#sdl-body-mount) are needed for the map portal.
-  const [visitedPages, setVisitedPages] = useState(() => new Set([getInitialPage(), 'dm']));
+  const [visitedPages, setVisitedPages] = useState(() => new Set([getInitialPage()]));
 
   // Expose setter so DashboardPage can push market-composition data into the portal
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function App() {
   // We set both the class AND an inline display style so there is no way for a
   // stale classList mutation to leak through between React renders.
   useLayoutEffect(() => {
-    const PAGES = ['overview', 'mp', 'dm', 'fpi', 'deriv', 'prim', 'mf', 'wm', 'odi', 'comm', 'im', 'macro', 'insights', 'dash', 'catalog', 'detail', 'ref'];
+    const PAGES = ['catalog', 'detail'];
     PAGES.forEach(p => {
       const el = document.getElementById('page-' + p);
       if (!el) return;
@@ -125,9 +125,9 @@ export default function App() {
     if (window.navigate) {
       const rawHash = window.location.hash.replace('#', '');
       const hash = rawHash === 'dashboard' ? 'dash' : rawHash;
-      const pages = ['overview', 'mp', 'dm', 'fpi', 'deriv', 'prim', 'mf', 'wm', 'odi', 'comm', 'im', 'macro', 'insights', 'dash', 'catalog', 'detail', 'ref'];
-      const start = pages.includes(hash) ? hash : 'overview';
-      window.navigate(start === 'detail' ? 'overview' : start);
+      const pages = ['catalog', 'detail'];
+      const start = pages.includes(hash) ? hash : 'catalog';
+      window.navigate(start === 'detail' ? 'catalog' : start);
     }
 
     // CatalogPage is a React component — prevent app.js from fetching
@@ -151,48 +151,35 @@ export default function App() {
       window.setTheme = (t) => { origSetTheme(t); setIsDark(t === 'dark'); };
     }
 
-    // Wait for #sdl-body-mount to have real clientWidth before mounting portal
-    const tryMount = () => {
-      const mapEl = document.getElementById('sdl-body-mount');
-      if (!mapEl) return;
-
-      if (mapEl.clientWidth > 0) {
-        setMapTarget(mapEl);
-      } else {
-        // Use ResizeObserver to wait for layout
-        const ro = new ResizeObserver((entries) => {
-          for (const entry of entries) {
-            if (entry.contentRect.width > 0) {
-              ro.disconnect();
-              setMapTarget(mapEl);
-              break;
-            }
-          }
-        });
-        ro.observe(mapEl);
-      }
-    };
-
-    const trySgsMount = () => {
-      const sgsEl = document.getElementById('sdl-sgs-mount');
-      if (!sgsEl) return;
-      if (sgsEl.clientWidth > 0) {
-        setSgsMapTarget(sgsEl);
-      } else {
-        // Tab is hidden — observe the parent pane for when it becomes visible
-        const pane = document.getElementById('dmp-issuance') || sgsEl;
-        const ro = new ResizeObserver(() => {
-          if (sgsEl.clientWidth > 0) {
-            ro.disconnect();
-            setSgsMapTarget(sgsEl);
-          }
-        });
-        ro.observe(pane);
-      }
-    };
-
-    // Give the DOM a frame to lay out first
-    requestAnimationFrame(() => setTimeout(() => { tryMount(); trySgsMount(); }, 100));
+    // // Wait for #sdl-body-mount to have real clientWidth before mounting portal
+    // const tryMount = () => {
+    //   const mapEl = document.getElementById('sdl-body-mount');
+    //   if (!mapEl) return;
+    //   if (mapEl.clientWidth > 0) {
+    //     setMapTarget(mapEl);
+    //   } else {
+    //     const ro = new ResizeObserver((entries) => {
+    //       for (const entry of entries) {
+    //         if (entry.contentRect.width > 0) { ro.disconnect(); setMapTarget(mapEl); break; }
+    //       }
+    //     });
+    //     ro.observe(mapEl);
+    //   }
+    // };
+    // const trySgsMount = () => {
+    //   const sgsEl = document.getElementById('sdl-sgs-mount');
+    //   if (!sgsEl) return;
+    //   if (sgsEl.clientWidth > 0) {
+    //     setSgsMapTarget(sgsEl);
+    //   } else {
+    //     const pane = document.getElementById('dmp-issuance') || sgsEl;
+    //     const ro = new ResizeObserver(() => {
+    //       if (sgsEl.clientWidth > 0) { ro.disconnect(); setSgsMapTarget(sgsEl); }
+    //     });
+    //     ro.observe(pane);
+    //   }
+    // };
+    // requestAnimationFrame(() => setTimeout(() => { tryMount(); trySgsMount(); }, 100));
     setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
   }, []);
 
@@ -238,28 +225,28 @@ export default function App() {
         <div className="body">
           <Topbar session={session} onNavigate={p => { setActivePage(p); window._setActivePage?.(p); }} onMenuOpen={() => setMobileNavOpen(true)} />
           <div className="pages">
-            {visitedPages.has('overview')  && <OverviewPage       isActive={activePage === 'overview'} />}
-            {visitedPages.has('mp')        && <MarketPulsePage    isActive={activePage === 'mp'}       />}
-            {visitedPages.has('dm')        && <DebtMarketsPage    isActive={activePage === 'dm'}       />}
-            {visitedPages.has('fpi')       && <FpiTrackerPage     isActive={activePage === 'fpi'}      />}
-            {visitedPages.has('deriv')     && <DerivativesPage    isActive={activePage === 'deriv'}    />}
-            {visitedPages.has('prim')      && <PrimaryMarketsPage isActive={activePage === 'prim'}     />}
-            {visitedPages.has('mf')        && <MutualFundsPage        isActive={activePage === 'mf'}  />}
-            {visitedPages.has('wm')        && <WealthManagementPage   isActive={activePage === 'wm'}  />}
-            {visitedPages.has('odi')       && <ODIPNotesPage          isActive={activePage === 'odi'}  />}
-            {visitedPages.has('comm')      && <CommodityMarketsPage   isActive={activePage === 'comm'} />}
-            {visitedPages.has('im')        && <IntermediariesPage     isActive={activePage === 'im'}    />}
-            {visitedPages.has('macro')     && <MacroIndicatorsPage    isActive={activePage === 'macro'} />}
-            {visitedPages.has('insights')  && <InsightsPage           isActive={activePage === 'insights'} />}
-            {/* {visitedPages.has('dash')      && <DashboardPage      isActive={activePage === 'dash'}     />} */}
+            {/* {visitedPages.has('overview')  && <OverviewPage       isActive={activePage === 'overview'} />} */}
+            {/* {visitedPages.has('mp')        && <MarketPulsePage    isActive={activePage === 'mp'}       />} */}
+            {/* {visitedPages.has('dm')        && <DebtMarketsPage    isActive={activePage === 'dm'}       />} */}
+            {/* {visitedPages.has('fpi')       && <FpiTrackerPage     isActive={activePage === 'fpi'}      />} */}
+            {/* {visitedPages.has('deriv')     && <DerivativesPage    isActive={activePage === 'deriv'}    />} */}
+            {/* {visitedPages.has('prim')      && <PrimaryMarketsPage isActive={activePage === 'prim'}     />} */}
+            {/* {visitedPages.has('mf')        && <MutualFundsPage        isActive={activePage === 'mf'}  />} */}
+            {/* {visitedPages.has('wm')        && <WealthManagementPage   isActive={activePage === 'wm'}  />} */}
+            {/* {visitedPages.has('odi')       && <ODIPNotesPage          isActive={activePage === 'odi'}  />} */}
+            {/* {visitedPages.has('comm')      && <CommodityMarketsPage   isActive={activePage === 'comm'} />} */}
+            {/* {visitedPages.has('im')        && <IntermediariesPage     isActive={activePage === 'im'}    />} */}
+            {/* {visitedPages.has('macro')     && <MacroIndicatorsPage    isActive={activePage === 'macro'} />} */}
+            {/* {visitedPages.has('insights')  && <InsightsPage           isActive={activePage === 'insights'} />} */}
+            {/* {visitedPages.has('dash')      && <DashboardPage          isActive={activePage === 'dash'}     />} */}
             {visitedPages.has('detail')    && <DatasetDetailPage  isActive={activePage === 'detail'}   />}
             {visitedPages.has('catalog')   && <CatalogPage        isActive={activePage === 'catalog'}  />}
           </div>
         </div>
-        <FiltersPanel />
-        <PivotPanel />
-        <ComparePanel />
-        <WatchlistPanel />
+        {/* <FiltersPanel /> */}
+        {/* <PivotPanel /> */}
+        {/* <ComparePanel /> */}
+        {/* <WatchlistPanel /> */}
       </div>
       {/* Panel backdrop */}
       <div
@@ -272,8 +259,8 @@ export default function App() {
         style={{display:'none'}}
       ></div>
       <SourceUrlsModal />
-      {mapTarget    && ReactDOM.createPortal(<IndiaMap isDark={isDark} showRankings={false} plainMap={true} pieData={ovPieData} />, mapTarget)}
-      {sgsMapTarget && ReactDOM.createPortal(<IndiaMap isDark={isDark} showRankings={true}  />, sgsMapTarget)}
+      {/* {mapTarget    && ReactDOM.createPortal(<IndiaMap isDark={isDark} showRankings={false} plainMap={true} pieData={ovPieData} />, mapTarget)} */}
+      {/* {sgsMapTarget && ReactDOM.createPortal(<IndiaMap isDark={isDark} showRankings={true}  />, sgsMapTarget)} */}
     </>
   );
 }
