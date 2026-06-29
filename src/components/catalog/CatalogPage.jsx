@@ -400,27 +400,7 @@ export default function CatalogPage({ isActive }) {
   return (
     <div className={`page${isActive ? ' on' : ''}`} id="page-catalog">
 
-      {/* RBI Policy Rates ticker — same as dashboard */}
-      {/* {Object.keys(rbiRates).length > 0 && (
-        <div style={{display:'flex',alignItems:'center',background:'#000',flexShrink:0,overflow:'hidden'}}>
-          <div style={{display:'flex',alignItems:'center',gap:'6px',padding:'8px 12px',borderRight:'1px solid rgba(255,255,255,.15)',flexShrink:0,zIndex:1}}>
-            <div style={{background:'#c0392b',color:'#fff',fontSize:'9px',fontWeight:700,padding:'2px 6px',borderRadius:'3px',letterSpacing:'.05em'}}>RBI</div>
-            <span style={{fontSize:'10px',color:'rgba(255,255,255,.5)',fontWeight:600,whiteSpace:'nowrap'}}>Policy Rates</span>
-          </div>
-          <div style={{flex:1,overflow:'hidden',position:'relative'}}>
-            <div style={{display:'flex',width:'max-content',animation:'rbi-ticker 22s linear infinite'}}>
-              {[...RBI_ITEMS, ...RBI_ITEMS].map((item, i) => (
-                <div key={i} style={{display:'flex',alignItems:'center',gap:'5px',padding:'8px 18px',borderRight:'1px solid rgba(255,255,255,.08)',whiteSpace:'nowrap'}}>
-                  <span style={{fontSize:'10px',fontWeight:600,color:'rgba(255,255,255,.4)',letterSpacing:'.04em'}}>{item.label}</span>
-                  <span style={{fontSize:'12px',fontWeight:700,fontFamily:'var(--mo)',color: item.key === '__period__' ? 'rgba(255,255,255,.3)' : rbiRates[item.key]?.value != null ? '#fff' : 'rgba(255,255,255,.3)'}}>
-                    {item.key === '__period__' ? rbiRates.repo_rate.period : rbiRates[item.key]?.value != null ? `${rbiRates[item.key].value}%` : '—'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )} */}
+    
 
       <div className="cat-shell">
 
@@ -451,21 +431,7 @@ export default function CatalogPage({ isActive }) {
             <div className="sum-kpi"><div className="sum-kpi-v">{loading ? '—' : summary.active}</div><div className="sum-kpi-l">Active</div></div>
             <div className="sum-kpi"><div className="sum-kpi-v" style={enriching ? { opacity: 0.5 } : {}}>{loading ? '—' : summary.metrics}</div><div className="sum-kpi-l">Metrics</div></div>
             <div className="sum-kpi" style={{ borderRight: 'none' }}><div className="sum-kpi-v" style={enriching ? { opacity: 0.5 } : {}}>{loading ? '—' : summary.dims.toLocaleString()}</div><div className="sum-kpi-l">Dimensions</div></div>
-            {/* <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--tx3)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-              Sort:
-              <select
-                value={sort}
-                onChange={e => setSort(e.target.value)}
-                style={{ background: 'none', border: 'none', outline: 'none', fontSize: 11.5, color: 'var(--tx2)', fontFamily: 'var(--fn)', cursor: 'pointer' }}
-              >
-                <option value="created">Newest First</option>
-                <option value="name">Name A–Z</option>
-                <option value="src">Source</option>
-                <option value="updated">Last Updated</option>
-                <option value="metrics">Metrics ↓</option>
-                <option value="dims">Dimensions ↓</option>
-              </select>
-            </div> */}
+           
             <div className="view-toggle">
               <div className={`vt-btn${view === 'list' ? ' on' : ''}`} onClick={() => setView('list')} title="List view">
                 <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
@@ -481,12 +447,12 @@ export default function CatalogPage({ isActive }) {
             {/* Header always rendered outside scroll — never moves */}
             {!loading && !error && view === 'list' && (
               <div className="list-head">
-                <div className="lh-cell" onClick={() => setSort('name')}>Dataset <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" /></svg></div>
+                <div className="lh-cell" onClick={() => setSort('name')}>Dataset</div>
                 <div className="lh-cell" onClick={() => setSort('src')}>Source</div>
                 <div className="lh-cell" onClick={() => setSort('freq')}>Frequency</div>
-                <div className="lh-cell" onClick={() => setSort('metrics')}>Metrics <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" /></svg></div>
-                <div className="lh-cell" onClick={() => setSort('dims')}>Dimensions <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" /></svg></div>
-                <div className="lh-cell" onClick={() => setSort('updated')}>Last Updated <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" /></svg></div>
+                <div className="lh-cell" onClick={() => setSort('metrics')}>Metrics</div>
+                <div className="lh-cell" onClick={() => setSort('dims')}>Dimensions</div>
+                <div className="lh-cell" onClick={() => setSort('updated')}>Last Updated</div>
                 <div className="lh-cell">Status</div>
                 <div className="lh-cell">Actions</div>
               </div>
