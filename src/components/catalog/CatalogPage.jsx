@@ -1,501 +1,680 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { getDataSources, getDataSourceMetrics, getDataSourceDimensionTypes, getAllDimensions, getDataSourceUrls, analyticsAggregate } from '../../api/bond_api';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { getDataSources, getDataSourceMetrics, getDataSourceDimensionTypes, getAllDimensions, getDataSourceUrls } from '../../api/bond_api';
 
-// ── helpers ────────────────────────────────────────────────────────────────
-function extractPeriodFromS3Url(url) {
-  if (!url) return null;
-  try {
-    const path = new URL(url).pathname;
-    const m = path.match(/\/(\d{4}[^/]*)\//);
-    return m ? m[1] : null;
-  } catch {}
-  return null;
+// ─── design tokens ────────────────────────────────────────────────────────────
+const C = {
+  blue:'#2563EB', blueLt:'#EFF6FF', blueMid:'#DBEAFE',
+  text:'#111827', textSec:'#374151', textMut:'#6B7280', textFaint:'#9CA3AF',
+  bg:'#F8FAFC', card:'#FFFFFF', hdr:'#F9FAFB',
+  border:'#E5E7EB', borderStr:'#D1D5DB', hoverRow:'#F5F9FF',
+  success:'#22C55E', successLt:'#F0FDF4',
+  danger:'#EF4444',
+  shadowSm:'0 1px 2px rgba(0,0,0,.05)',
+  shadowMd:'0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -1px rgba(0,0,0,.05)',
+  shadowHov:'0 8px 20px -4px rgba(37,99,235,.15)',
+};
+
+const SRC_STYLE = {
+  rbi:  {background:'#EFF6FF',color:'#1D4ED8',border:'1px solid #BFDBFE'},
+  nse:  {background:'#F0FDF4',color:'#166534',border:'1px solid #BBF7D0'},
+  sebi: {background:'#FFFBEB',color:'#92400E',border:'1px solid #FDE68A'},
+  ccil: {background:'#F5F3FF',color:'#5B21B6',border:'1px solid #DDD6FE'},
+  fbil: {background:'#ECFEFF',color:'#155E75',border:'1px solid #A5F3FC'},
+  bse:  {background:'#FFF7ED',color:'#9A3412',border:'1px solid #FED7AA'},
+  amfi: {background:'#FDF4FF',color:'#6B21A8',border:'1px solid #E9D5FF'},
+  other:{background:'#F9FAFB',color:'#374151',border:'1px solid #E5E7EB'},
+};
+const FREQ_STYLE = {
+  daily:    {background:'#F0FDF4',color:'#166534',border:'1px solid #BBF7D0'},
+  weekly:   {background:'#EFF6FF',color:'#1D4ED8',border:'1px solid #BFDBFE'},
+  monthly:  {background:'#FFFBEB',color:'#92400E',border:'1px solid #FDE68A'},
+  quarterly:{background:'#F5F3FF',color:'#5B21B6',border:'1px solid #DDD6FE'},
+  yearly:   {background:'#FFF7ED',color:'#9A3412',border:'1px solid #FED7AA'},
+};
+const STATUS_CFG = {
+  active:  {bg:'#F0FDF4',color:'#166534',dot:'#22C55E',label:'Active'},
+  inactive:{bg:'#F9FAFB',color:'#6B7280',dot:'#9CA3AF',label:'Inactive'},
+  pending: {bg:'#FFFBEB',color:'#92400E',dot:'#F59E0B',label:'Pending'},
+  failed:  {bg:'#FEF2F2',color:'#991B1B',dot:'#EF4444',label:'Failed'},
+};
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+function useWindowWidth() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return w;
 }
 
-// ── shape mapper — uses actual API field names from /data-sources/ response ─
+function extractPeriodFromS3Url(url) {
+  if (!url) return null;
+  try { const m = new URL(url).pathname.match(/\/(\d{4}[^/]*)\//); return m ? m[1] : null; }
+  catch { return null; }
+}
+
+function relativeTime(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d)) return '';
+    const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+    if (days < 0)  return '';
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7)  return `${days}d ago`;
+    if (days < 30) return `${Math.floor(days / 7)}w ago`;
+    if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+    return `${Math.floor(days / 365)}y ago`;
+  } catch { return ''; }
+}
+
+function exportCSV(rows) {
+  const h = ['Dataset','Identifier','Source','Frequency','Metrics','Dimensions','Last Updated','Status'];
+  const b = rows.map(d => [`"${(d.title||'').replace(/"/g,'""')}"`,d.id,d.srcLabel,d.freq,d.metrics,d.dims,d.updated,d.status].join(','));
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([[h.join(','),...b].join('\n')],{type:'text/csv'})),
+    download:'bond-analytics-datasets.csv',
+  });
+  a.click();
+}
+
 function mapSource(raw) {
-  // source_name: "RBI", "NSE EBP", etc.
-  const shortName = (raw.source_name || '').toLowerCase();
-  let srcKey = 'other';
-  if (shortName.includes('nse'))       srcKey = 'nse';
-  else if (shortName.includes('rbi'))  srcKey = 'rbi';
-  else if (shortName.includes('sebi')) srcKey = 'sebi';
-  else if (shortName.includes('ccil')) srcKey = 'ccil';
-  else if (shortName.includes('fbil')) srcKey = 'fbil';
-  else if (shortName.includes('bse'))  srcKey = 'bse';
-
-  // update_interval: "daily" | "weekly" | "monthly" | "quarterly"
-  const rawFreq = (raw.update_interval || raw.frequency || '').toLowerCase();
-  let freq = 'weekly';
-  if (rawFreq.includes('daily'))        freq = 'daily';
-  else if (rawFreq.includes('month'))   freq = 'monthly';
-  else if (rawFreq.includes('quarter')) freq = 'quarterly';
-  else if (rawFreq.includes('week'))    freq = 'weekly';
-
-  // updated_at is the timestamp field in this API
-  let updated = raw.updated_at || raw.last_updated || '';
-  if (updated) {
-    try {
-      const d = new Date(updated);
-      if (!isNaN(d))
-        updated = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch (_) {}
-  }
-
-  // data_source_id is the numeric PK; fall back to source_id or id if the field name differs
-  const rawId = raw.data_source_id ?? raw.source_id ?? raw.id;
+  const sn = (raw.source_name||'').toLowerCase();
+  let src='other';
+  if(sn.includes('nse')) src='nse';
+  else if(sn.includes('rbi')) src='rbi';
+  else if(sn.includes('sebi')) src='sebi';
+  else if(sn.includes('ccil')) src='ccil';
+  else if(sn.includes('fbil')) src='fbil';
+  else if(sn.includes('bse')) src='bse';
+  else if(sn.includes('amfi')) src='amfi';
+  const rf=(raw.update_interval||raw.frequency||'').toLowerCase();
+  let freq='weekly';
+  if(rf.includes('daily')) freq='daily';
+  else if(rf.includes('month')) freq='monthly';
+  else if(rf.includes('quarter')) freq='quarterly';
+  let updated=raw.updated_at||raw.last_updated||'';
+  if(updated){try{const d=new Date(updated);if(!isNaN(d))updated=d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}catch(_){}}
+  const rawId=raw.data_source_id??raw.source_id??raw.id;
   return {
-    sourceId: rawId || undefined,
-    id:       raw.dataset_code   || String(rawId || ''),
-    title:    raw.dataset_name   || raw.name || raw.title || 'Untitled Dataset',
-    src:      srcKey,
-    srcLabel: raw.source_name    || srcKey.toUpperCase(),
-    freq,
-    // metrics/dims start at 0; enriched by parallel API calls after initial load
-    metrics:  0,
-    dims:     0,
-    updated,
-    createdAt: raw.created_at || '',
-    status:   raw.is_active === false ? 'inactive' : 'active',
-    desc:     raw.description || '',
-    cat:      raw.category || raw.cat || '',
-    url:      raw.source_url || raw.url || '',
+    sourceId:rawId||undefined,
+    id:raw.dataset_code||String(rawId||''),
+    title:raw.dataset_name||raw.name||raw.title||'Untitled Dataset',
+    src,srcLabel:raw.source_name||src.toUpperCase(),
+    freq,metrics:0,dims:0,updated,
+    createdAt:raw.created_at||'',
+    status:raw.is_active===false?'inactive':'active',
+    desc:raw.description||'',cat:raw.category||'',
   };
 }
 
-// ── CSS class helpers ──────────────────────────────────────────────────────
-const srcTagClass = src =>
-  ({ nse: 'tag-nse', rbi: 'tag-rbi', sebi: 'tag-sebi', ccil: 'tag-ccil', fbil: 'tag-fbil' }[src] || 'tag-nse');
-const freqClass = f =>
-  ({ daily: 'freq-d', weekly: 'freq-w', monthly: 'freq-m' }[f] || 'freq-w');
-const spClass = s => (s === 'active' ? 'sp-live' : 'sp-stale');
-
-// ── Fetch source URLs then open the modal ─────────────────────────────────
 async function openSourceUrlsModal(sourceId, title) {
-  // Show modal immediately with a loading state
-  const bodyEl = document.getElementById('modal-body');
-  const dsEl   = document.getElementById('modal-ds');
-  const modalEl = document.getElementById('modal-ov');
-  if (!modalEl) return;
-  if (dsEl)   dsEl.textContent = title;
-  if (bodyEl) bodyEl.innerHTML = '<div style="padding:24px;text-align:center;font-size:12px;color:var(--tx3)">Loading…</div>';
+  const bodyEl=document.getElementById('modal-body');
+  const dsEl=document.getElementById('modal-ds');
+  const modalEl=document.getElementById('modal-ov');
+  if(!modalEl)return;
+  if(dsEl)dsEl.textContent=title;
+  if(bodyEl)bodyEl.innerHTML='<div style="padding:24px;text-align:center;font-size:12px;color:#6B7280">Loading…</div>';
   modalEl.classList.add('on');
-
-  try {
-    const urls = await getDataSourceUrls(sourceId);
-    const list = (Array.isArray(urls) ? urls : []).filter(item => item.s3_url);
-    if (bodyEl) {
-      if (list.length === 0) {
-        bodyEl.innerHTML = '<div style="padding:24px;text-align:center;font-size:12px;color:var(--tx3)">No source URLs found.</div>';
-      } else {
-        bodyEl.innerHTML = list.map((item, i) => {
-          const href  = item.s3_url;
-          const period = extractPeriodFromS3Url(item.s3_url) || item.name || item.label || `File ${i + 1}`;
-          const note  = item.note ? item.note.replace(/"/g, '&quot;') : '';
-          const safeHref = href.replace(/'/g, '%27');
-          return `
-            <div class="src-item"${note ? ` title="${note}"` : ''}>
-              <div class="src-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-              <div style="flex:1;min-width:0"><div class="src-name">${period}</div>${note ? `<div class="src-note">${note}</div>` : ''}</div>
-              <button class="btn-src" onclick="window.open('${safeHref}','_blank')">Download <svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg></button>
-            </div>`;
-        }).join('');
-      }
-    }
-  } catch {
-    if (bodyEl) bodyEl.innerHTML = '<div style="padding:24px;text-align:center;font-size:12px;color:var(--tx3)">Failed to load URLs.</div>';
-  }
+  try{
+    const urls=await getDataSourceUrls(sourceId);
+    const list=(Array.isArray(urls)?urls:[]).filter(i=>i.s3_url);
+    if(!bodyEl)return;
+    if(!list.length){bodyEl.innerHTML='<div style="padding:24px;text-align:center;font-size:12px;color:#6B7280">No source URLs found.</div>';return;}
+    bodyEl.innerHTML=list.map((item,i)=>{
+      const period=extractPeriodFromS3Url(item.s3_url)||item.name||`File ${i+1}`;
+      const note=(item.note||'').replace(/"/g,'&quot;');
+      const href=item.s3_url.replace(/'/g,'%27');
+      return `<div class="src-item"${note?` title="${note}"`:''}><div class="src-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div><div style="flex:1;min-width:0"><div class="src-name">${period}</div>${note?`<div class="src-note">${note}</div>`:''}</div><button class="btn-src" onclick="window.open('${href}','_blank')">Download <svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg></button></div>`;
+    }).join('');
+  }catch{if(bodyEl)bodyEl.innerHTML='<div style="padding:24px;text-align:center;font-size:12px;color:#EF4444">Failed to load.</div>';}
 }
 
-// ── Row components defined at module level (never inside a render) ─────────
-function ListRow({ d }) {
-  return (
-    <div className="ds-row" onClick={() => window.openDetail?.(d.sourceId)}>
-      <div className="ds-cell">
-        <div className="ds-name-wrap" title={d.title}>
-          <div className="ds-name">{d.title}</div>
-          <div className="ds-slug">{d.id}</div>
-        </div>
+// ─── StatCard ─────────────────────────────────────────────────────────────────
+function StatCard({ icon, title, value, desc, accent, loading, enriching, isMobile }) {
+  const [hov,setHov]=useState(false);
+  const a={
+    blue:  {bg:'#EFF6FF',ic:'#2563EB'},
+    green: {bg:'#DCFCE7',ic:'#16A34A'},
+    purple:{bg:'#EDE9FE',ic:'#7C3AED'},
+    orange:{bg:'#FEF3C7',ic:'#D97706'},
+  }[accent]||{bg:'#EFF6FF',ic:'#2563EB'};
+  return(
+    <div onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{
+      background:C.card,border:`1px solid ${hov?C.borderStr:C.border}`,
+      borderRadius:10,padding:isMobile?'14px 16px':'16px 18px',
+      display:'flex',alignItems:'center',gap:14,
+      boxShadow:hov?C.shadowHov:C.shadowSm,
+      transform:hov?'translateY(-2px)':'translateY(0)',
+      transition:'all .18s ease',
+    }}>
+      <div style={{width:44,height:44,borderRadius:10,background:a.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={a.ic} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
       </div>
-      <div className="ds-cell"><span className={`src-tag ${srcTagClass(d.src)}`}>{d.srcLabel}</span></div>
-      <div className="ds-cell"><span className={`freq ${freqClass(d.freq)}`}>{d.freq}</span></div>
-      <div className="ds-cell" style={{ fontFamily: 'var(--mo)', fontWeight: 600, color: 'var(--tx)' }}>{d.metrics}</div>
-      <div className="ds-cell" style={{ fontFamily: 'var(--mo)', color: 'var(--tx2)' }}>{d.dims.toLocaleString()}</div>
-      <div className="ds-cell" style={{ fontSize: 11.5, color: 'var(--tx3)' }}>{d.updated}</div>
-      <div className="ds-cell"><span className={`sp ${spClass(d.status)}`}>{d.status === 'active' ? 'Active' : 'Inactive'}</span></div>
-      <div className="row-act" onClick={e => e.stopPropagation()}>
-        <div className="row-ico-btn" onClick={() => window.openDetail?.(d.sourceId)} title="Explore">
-          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
-        </div>
-        <div className="row-ico-btn" onClick={() => openSourceUrlsModal(d.sourceId, d.title)} title="Source URLs">
-          <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" /></svg>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CardItem({ d }) {
-  return (
-    <div
-      style={{
-        background: 'var(--sf)', border: '1px solid var(--bdr)', borderRadius: 12,
-        padding: '12px 14px', cursor: 'pointer', transition: 'all .13s', boxShadow: 'var(--shxs)',
-      }}
-      onClick={() => window.openDetail?.(d.sourceId)}
-      onMouseOver={e => { e.currentTarget.style.boxShadow = 'var(--shmd)'; e.currentTarget.style.borderColor = 'var(--bdr2)'; }}
-      onMouseOut={e => { e.currentTarget.style.boxShadow = 'var(--shxs)'; e.currentTarget.style.borderColor = 'var(--bdr)'; }}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--tx)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.title}</div>
-          <div style={{ fontFamily: 'var(--mo)', fontSize: 9.5, color: 'var(--tx3)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.id}</div>
-        </div>
-        <span className={`src-tag ${srcTagClass(d.src)}`} style={{ flexShrink: 0 }}>{d.srcLabel}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span className={`freq ${freqClass(d.freq)}`}>{d.freq}</span>
-          <span className={`sp ${spClass(d.status)}`}>{d.status === 'active' ? 'Active' : 'Inactive'}</span>
-        </div>
-        <div style={{ fontSize: 10.5, color: 'var(--tx3)' }}>
-          <span style={{ fontFamily: 'var(--mo)', fontWeight: 600, color: 'var(--tx)' }}>{d.metrics}</span> metrics ·{' '}
-          <span style={{ fontFamily: 'var(--mo)', fontWeight: 600, color: 'var(--tx)' }}>{d.dims.toLocaleString()}</span> dims
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Pagination ────────────────────────────────────────────────────────────
-function Pagination({ page, totalPages, total, pageSize, onPage }) {
-  if (totalPages <= 1) return null;
-  const start = (page - 1) * pageSize + 1;
-  const end   = Math.min(page * pageSize, total);
-  const pages = [];
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-  } else if (page <= 4) {
-    pages.push(1, 2, 3, 4, 5, '…', totalPages);
-  } else if (page >= totalPages - 3) {
-    pages.push(1, '…', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
-  } else {
-    pages.push(1, '…', page - 1, page, page + 1, '…', totalPages);
-  }
-  return (
-    <div className="cat-pg">
-      <span className="cat-pg-info">{start}–{end} of {total} datasets</span>
-      <div className="cat-pg-btns">
-        <button className="pg-btn" disabled={page === 1} onClick={() => onPage(page - 1)}>‹</button>
-        {pages.map((p, i) =>
-          p === '…'
-            ? <span key={`e${i}`} className="pg-ellipsis">…</span>
-            : <button key={p} className={`pg-btn${p === page ? ' on' : ''}`} onClick={() => onPage(p)}>{p}</button>
-        )}
-        <button className="pg-btn" disabled={page === totalPages} onClick={() => onPage(page + 1)}>›</button>
-      </div>
-    </div>
-  );
-}
-
-// ── Skeleton loader ────────────────────────────────────────────────────────
-function CatalogSkeleton() {
-  return (
-    <div style={{ border: '1px solid var(--bdr)', borderRadius: '0 0 10px 10px', overflow: 'hidden', background: 'var(--sf)' }}>
-      {[...Array(12)].map((_, i) => (
-        <div key={i} className="skel-row" style={{ animationDelay: `${i * 0.06}s`, opacity: 1 - i * 0.045 }}>
-          {[...Array(8)].map((__, j) => <span key={j} className="skel-cell" style={{ animationDelay: `${(i + j) * 0.07}s` }} />)}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export default function CatalogPage({ isActive }) {
-  const [rbiRates, setRbiRates] = useState({});
-
-  useEffect(() => {
-    const METRICS = [
-      { key: 'repo_rate',    id: 46 },
-      { key: 'sdf_rate',     id: 47 },
-      { key: 'msf_rate',     id: 48 },
-      { key: 'bank_rate',    id: 49 },
-      { key: 'reverse_repo', id: 50 },
-      { key: 'crr',          id: 51 },
-      { key: 'slr',          id: 52 },
-    ];
-    Promise.all(
-      METRICS.map(m =>
-        analyticsAggregate({ source_id: 11, date_attribute_type_id: 9, metric_id: m.id, granularity: 'month', aggregation: 'sum', limit: 100 })
-          .then(rows => {
-            const arr = Array.isArray(rows) ? rows : [];
-            const latest = arr.length ? arr[arr.length - 1] : null;
-            return { key: m.key, value: latest?.value ?? null, period: latest?.period ?? null };
-          })
-          .catch(() => ({ key: m.key, value: null, period: null }))
-      )
-    ).then(results => {
-      const rates = {};
-      results.forEach(r => { rates[r.key] = { value: r.value, period: r.period }; });
-      setRbiRates(rates);
-    });
-  }, []);
-
-  const [datasets, setDatasets]         = useState([]);
-  const [loading, setLoading]           = useState(false);
-  const [enriching, setEnriching]       = useState(false);
-  const [error, setError]               = useState(null);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [srcFilter, setSrcFilter]       = useState('all');
-  const [freqFilter, setFreqFilter]     = useState('all');
-  const [search, setSearch]             = useState('');
-  const [sort, setSort]                 = useState('created');
-  const [view, setView]                 = useState('list');
-  const [page, setPage]                 = useState(1);
-  const PAGE_SIZE = 12;
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Phase 1 — fetch all data sources (paginated)
-      const PAGE = 50;
-      let skip = 0;
-      const all = [];
-      while (true) {
-        const page = await getDataSources(skip, PAGE);
-        const rows = Array.isArray(page) ? page : (page.items || page.data || []);
-        if (!rows.length) break;
-        all.push(...rows);
-        if (rows.length < PAGE) break;
-        skip += PAGE;
-      }
-      const mapped = all.map(mapSource).filter(d => d.sourceId !== 11);
-      setDatasets(mapped);
-      window.DATASETS = mapped;
-      setLoading(false);
-
-      // Phase 2 — enrich each row with metric count + total dimension count in parallel
-      setEnriching(true);
-      const enriched = await Promise.all(
-        mapped.map(async (d) => {
-          try {
-            const [metricsRes, dimTypes] = await Promise.all([
-              getDataSourceMetrics(d.sourceId),
-              getDataSourceDimensionTypes(d.sourceId),
-            ]);
-
-            // Sum all dimensions across every dimension type for this source
-            let totalDims = 0;
-            if (Array.isArray(dimTypes) && dimTypes.length > 0) {
-              const dimCounts = await Promise.all(
-                dimTypes.map(dt => getAllDimensions(dt.dimension_type_id || dt.id))
-              );
-              totalDims = dimCounts.reduce((sum, dims) => sum + (Array.isArray(dims) ? dims.length : 0), 0);
-            }
-
-            return {
-              ...d,
-              metrics: Array.isArray(metricsRes) ? metricsRes.length : 0,
-              dims:    totalDims,
-            };
-          } catch {
-            return d;
-          }
-        })
-      );
-      setDatasets(enriched);
-      window.DATASETS = enriched;
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
-    } finally {
-      setEnriching(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // ── derived data ──────────────────────────────────────────────────────
-  const sourceCounts = useMemo(() => {
-    const c = {};
-    datasets.forEach(d => { c[d.src] = (c[d.src] || 0) + 1; });
-    return c;
-  }, [datasets]);
-
-  const uniqueSources = useMemo(() => {
-    const m = {};
-    datasets.forEach(d => { m[d.src] = d.srcLabel; });
-    return m;
-  }, [datasets]);
-
-  const freqCounts = useMemo(() => {
-    const c = { daily: 0, weekly: 0, monthly: 0 };
-    datasets.forEach(d => { if (c[d.freq] !== undefined) c[d.freq]++; });
-    return c;
-  }, [datasets]);
-
-  const summary = useMemo(() => ({
-    total:   datasets.length,
-    active:  datasets.filter(d => d.status === 'active').length,
-    metrics: datasets.reduce((s, d) => s + (d.metrics || 0), 0),
-    dims:    datasets.reduce((s, d) => s + (d.dims    || 0), 0),
-  }), [datasets]);
-
-  const filtered = useMemo(() => {
-    let ds = [...datasets];
-    if (srcFilter    !== 'all') ds = ds.filter(d => d.src    === srcFilter);
-    if (statusFilter !== 'all') ds = ds.filter(d => d.status === statusFilter);
-    if (freqFilter   !== 'all') ds = ds.filter(d => d.freq   === freqFilter);
-    const q = search.toLowerCase().trim();
-    if (q) ds = ds.filter(d =>
-      d.title.toLowerCase().includes(q)    ||
-      d.id.toLowerCase().includes(q)       ||
-      d.srcLabel.toLowerCase().includes(q) ||
-      d.cat.toLowerCase().includes(q)
-    );
-    const sortMap = {
-      name:    (a, b) => a.title.localeCompare(b.title),
-      src: (a, b) => {
-        const grp = { rbi: 0, nse: 1, sebi: 2 };
-        const ga = grp[a.src] ?? 99, gb = grp[b.src] ?? 99;
-        if (ga !== gb) return ga - gb;
-        // within RBI: sourceId 8 first
-        if (a.src === 'rbi') {
-          if (Number(a.sourceId) === 8) return -1;
-          if (Number(b.sourceId) === 8) return 1;
+      <div style={{minWidth:0}}>
+        {loading
+          ?<div style={{height:28,width:60,background:'#F3F4F6',borderRadius:5,marginBottom:4}}/>
+          :<div style={{fontSize:isMobile?22:28,fontWeight:700,color:C.text,lineHeight:1,fontVariantNumeric:'tabular-nums',letterSpacing:'-0.5px'}}>
+            {typeof value==='number'?value.toLocaleString('en-IN'):value}
+            {enriching&&<span style={{fontSize:10,color:C.textFaint,marginLeft:4,fontWeight:400}}>…</span>}
+          </div>
         }
-        return a.title.localeCompare(b.title);
-      },
-      freq:    (a, b) => a.freq.localeCompare(b.freq),
-      metrics: (a, b) => b.metrics - a.metrics,
-      dims:    (a, b) => b.dims - a.dims,
-      updated:  (a, b) => b.updated.localeCompare(a.updated),
-      created:  (a, b) => b.createdAt.localeCompare(a.createdAt),
-    };
-    if (sortMap[sort]) ds.sort(sortMap[sort]);
-    return ds;
-  }, [datasets, srcFilter, statusFilter, freqFilter, search, sort]);
+        <div style={{fontSize:12,fontWeight:600,color:C.textSec,marginTop:3}}>{title}</div>
+        <div style={{fontSize:11,color:C.textFaint,marginTop:1}}>{desc}</div>
+      </div>
+    </div>
+  );
+}
 
-  // reset to page 1 whenever filters/search/sort change
-  useEffect(() => { setPage(1); }, [search, srcFilter, statusFilter, freqFilter, sort]);
+function StatusPill({status}){
+  const cfg=STATUS_CFG[status]||STATUS_CFG.inactive;
+  return(
+    <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:11.5,fontWeight:600,padding:'3px 9px',borderRadius:20,background:cfg.bg,color:cfg.color,whiteSpace:'nowrap'}}>
+      <span style={{width:5,height:5,borderRadius:'50%',background:cfg.dot,flexShrink:0}}/>
+      {cfg.label}
+    </span>
+  );
+}
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+function ActionBtn({title:tip,onClick,children}){
+  const [hov,setHov]=useState(false);
+  return(
+    <button title={tip} onClick={onClick} onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{
+      width:28,height:28,borderRadius:7,border:`1px solid ${hov?C.borderStr:C.border}`,
+      background:hov?C.blueLt:C.card,color:hov?C.blue:C.textFaint,
+      display:'flex',alignItems:'center',justifyContent:'center',
+      cursor:'pointer',transition:'all .14s',transform:hov?'scale(1.08)':'scale(1)',flexShrink:0,
+    }}>
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+    </button>
+  );
+}
 
-  // ── main render ───────────────────────────────────────────────────────
-  const RBI_ITEMS = [
-    { label: 'Repo Rate',    key: 'repo_rate' },
-    { label: 'SDF',          key: 'sdf_rate' },
-    { label: 'MSF',          key: 'msf_rate' },
-    { label: 'Bank Rate',    key: 'bank_rate' },
-    { label: 'Rev Repo',     key: 'reverse_repo' },
-    { label: 'CRR',          key: 'crr' },
-    { label: 'SLR',          key: 'slr' },
-    ...(rbiRates.repo_rate?.period ? [{ label: 'As of', key: '__period__' }] : []),
-  ];
+function SortIcon({active,dir}){
+  return(
+    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke={active?C.blue:C.textFaint} strokeWidth="2.5" strokeLinecap="round">
+      {dir==='asc'?<><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></>:<><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></>}
+    </svg>
+  );
+}
 
-  return (
-    <div className={`page${isActive ? ' on' : ''}`} id="page-catalog">
+function SkeletonRow(){
+  const p={background:'linear-gradient(90deg,#F3F4F6 25%,#E9EAEC 50%,#F3F4F6 75%)',backgroundSize:'200% 100%',animation:'skel-shimmer 1.4s ease-in-out infinite',borderRadius:4};
+  return(
+    <tr>
+      <td style={{padding:'11px 12px',width:36}}><div style={{width:14,height:14,borderRadius:3,...p}}/></td>
+      <td style={{padding:'11px 12px'}}><div style={{display:'flex',alignItems:'center',gap:8}}><div style={{width:30,height:30,borderRadius:7,...p}}/><div><div style={{height:11,width:140,...p,marginBottom:5}}/><div style={{height:9,width:90,...p}}/></div></div></td>
+      <td style={{padding:'11px 12px'}}><div style={{height:20,width:44,borderRadius:20,...p}}/></td>
+      <td style={{padding:'11px 12px'}}><div style={{height:20,width:54,borderRadius:20,...p}}/></td>
+      <td style={{padding:'11px 12px'}}><div style={{height:11,width:60,...p}}/></td>
+      <td style={{padding:'11px 12px'}}><div style={{height:11,width:80,...p}}/></td>
+      <td style={{padding:'11px 12px'}}><div style={{height:11,width:70,...p}}/></td>
+      <td style={{padding:'11px 12px'}}><div style={{height:20,width:56,borderRadius:20,...p}}/></td>
+      <td style={{padding:'11px 12px'}}><div style={{display:'flex',gap:5}}><div style={{width:28,height:28,borderRadius:7,...p}}/><div style={{width:28,height:28,borderRadius:7,...p}}/></div></td>
+    </tr>
+  );
+}
 
-    
-
-      <div className="cat-shell">
-
-        {/* MAIN CATALOG AREA */}
-        <div className="cat-main">
-          {/* Mobile filter trigger */}
-          <div className="fbar-mobile-btn" style={{ display: 'none', padding: '10px 10px 4px', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            <button className="btn" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }} onClick={() => window.togglePanel?.('filters')}>
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-              </svg>
-              Filters
+function PreviewDrawer({ds,onClose,favorites,toggleFav}){
+  const fav=favorites.has(ds.sourceId);
+  return(
+    <>
+      <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.18)',zIndex:999,backdropFilter:'blur(2px)'}}/>
+      <div style={{position:'fixed',top:0,right:0,bottom:0,width:'min(400px, 95vw)',background:C.card,borderLeft:`1px solid ${C.border}`,boxShadow:'-16px 0 40px rgba(0,0,0,.1)',zIndex:1000,display:'flex',flexDirection:'column',fontFamily:'inherit',overflowY:'auto'}}>
+        <div style={{padding:'16px 18px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'flex-start',gap:10,flexShrink:0}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap'}}>
+              <span style={{...SRC_STYLE[ds.src]||SRC_STYLE.other,fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,display:'inline-flex'}}>{ds.srcLabel}</span>
+              <StatusPill status={ds.status}/>
+            </div>
+            <div style={{fontSize:15,fontWeight:700,color:C.text,lineHeight:1.3}}>{ds.title}</div>
+            <div style={{fontSize:10.5,color:C.textFaint,fontFamily:'monospace',marginTop:3}}>{ds.id}</div>
+          </div>
+          <div style={{display:'flex',gap:5,flexShrink:0}}>
+            <button onClick={()=>toggleFav(ds.sourceId)} style={{width:30,height:30,borderRadius:7,border:`1px solid ${C.border}`,background:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:fav?'#F59E0B':C.textFaint}}>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill={fav?'#F59E0B':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </button>
+            <button onClick={onClose} style={{width:30,height:30,borderRadius:7,border:`1px solid ${C.border}`,background:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:C.textMut}}>
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-
-          {/* Summary + Toolbar in one row */}
-          <div className="cat-toolbar">
-            <div className="cat-search">
-              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
-              <input
-                placeholder="Search datasets…"
-                id="cat-q"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',borderBottom:`1px solid ${C.border}`}}>
+          {[{l:'Frequency',v:ds.freq.charAt(0).toUpperCase()+ds.freq.slice(1)},{l:'Metrics',v:ds.metrics||'—'},{l:'Dimensions',v:ds.dims?ds.dims.toLocaleString('en-IN'):'—'}].map((s,i)=>(
+            <div key={i} style={{padding:'12px 14px',borderRight:i<2?`1px solid ${C.border}`:'none'}}>
+              <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:C.textFaint,marginBottom:3}}>{s.l}</div>
+              <div style={{fontSize:18,fontWeight:700,color:C.text}}>{s.v}</div>
             </div>
-            <div className="sum-kpi" style={{ marginLeft: 16, paddingLeft: 16, borderLeft: '1px solid var(--bdr)', borderRight: 'none' }}><div className="sum-kpi-v">{loading ? '—' : summary.total}</div><div className="sum-kpi-l">Datasets</div></div>
-            <div className="sum-kpi"><div className="sum-kpi-v">{loading ? '—' : summary.active}</div><div className="sum-kpi-l">Active</div></div>
-            <div className="sum-kpi"><div className="sum-kpi-v" style={enriching ? { opacity: 0.5 } : {}}>{loading ? '—' : summary.metrics}</div><div className="sum-kpi-l">Metrics</div></div>
-            <div className="sum-kpi" style={{ borderRight: 'none' }}><div className="sum-kpi-v" style={enriching ? { opacity: 0.5 } : {}}>{loading ? '—' : summary.dims.toLocaleString()}</div><div className="sum-kpi-l">Dimensions</div></div>
-           
-            <div className="view-toggle">
-              <div className={`vt-btn${view === 'list' ? ' on' : ''}`} onClick={() => setView('list')} title="List view">
-                <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
-              </div>
-              <div className={`vt-btn${view === 'card' ? ' on' : ''}`} onClick={() => setView('card')} title="Card view">
-                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></svg>
-              </div>
-            </div>
-          </div>
-
-          {/* List / Card content */}
-          <div className="cat-list" id="cat-list-wrap">
-            {/* Header always rendered outside scroll — never moves */}
-            {!loading && !error && view === 'list' && (
-              <div className="list-head">
-                <div className="lh-cell" onClick={() => setSort('name')}>Dataset</div>
-                <div className="lh-cell" onClick={() => setSort('src')}>Source</div>
-                <div className="lh-cell" onClick={() => setSort('freq')}>Frequency</div>
-                <div className="lh-cell" onClick={() => setSort('metrics')}>Metrics</div>
-                <div className="lh-cell" onClick={() => setSort('dims')}>Dimensions</div>
-                <div className="lh-cell" onClick={() => setSort('updated')}>Last Updated</div>
-                <div className="lh-cell">Status</div>
-                <div className="lh-cell">Actions</div>
-              </div>
-            )}
-            {/* Only rows + pagination scroll */}
-            <div className="cat-rows-scroll">
-              {error ? (
-                <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 13, color: 'var(--tx2)', marginBottom: 8 }}>Failed to load datasets</div>
-                  <div style={{ fontSize: 11, color: 'var(--tx3)', marginBottom: 16 }}>{error}</div>
-                  <button className="btn" style={{ fontSize: 12 }} onClick={loadData}>Retry</button>
-                </div>
-              ) : loading ? (
-                <CatalogSkeleton />
-              ) : view === 'list' ? (
-                <>
-                  <div id="cat-rows">
-                    {filtered.length === 0 ? (
-                      <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--tx3)' }}>No datasets match your filters.</div>
-                    ) : (
-                      paginated.map(d => <ListRow key={d.id} d={d} />)
-                    )}
-                  </div>
-                  <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
-                </>
-              ) : (
-                <div id="cat-rows">
-                  {filtered.length === 0 ? (
-                    <div style={{ padding: '32px 20px', textAlign: 'center', fontSize: 13, color: 'var(--tx3)' }}>No datasets match your filters.</div>
-                  ) : (
-                    <>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10, padding: '14px 18px' }}>
-                        {paginated.map(d => <CardItem key={d.id} d={d} />)}
-                      </div>
-                      <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          ))}
+        </div>
+        {ds.desc&&<div style={{padding:'14px 18px',borderBottom:`1px solid ${C.border}`}}><div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:C.textFaint,marginBottom:6}}>Description</div><div style={{fontSize:12.5,color:C.textSec,lineHeight:1.6}}>{ds.desc}</div></div>}
+        <div style={{padding:'14px 18px',borderBottom:`1px solid ${C.border}`}}>
+          <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:C.textFaint,marginBottom:6}}>Last Updated</div>
+          <div style={{fontSize:13,color:C.text,fontWeight:500}}>{ds.updated||'—'}</div>
+          {ds.updated&&<div style={{fontSize:11,color:C.textFaint,marginTop:1}}>{relativeTime(ds.updated)}</div>}
+        </div>
+        <div style={{padding:'16px 18px',marginTop:'auto',flexShrink:0}}>
+          <button onClick={()=>{onClose();window.openDetail?.(ds.sourceId);}} style={{width:'100%',padding:'9px 0',borderRadius:9,background:C.blue,color:'#fff',border:'none',fontSize:13,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'opacity .15s'}} onMouseOver={e=>e.currentTarget.style.opacity='.88'} onMouseOut={e=>e.currentTarget.style.opacity='1'}>
+            Open Full Analysis
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
         </div>
       </div>
+    </>
+  );
+}
+
+function TableRow({d,isSel,isFav,onSelect,onFav,onPreview}){
+  const [hov,setHov]=useState(false);
+  const ss=SRC_STYLE[d.src]||SRC_STYLE.other;
+  const fs=FREQ_STYLE[d.freq]||FREQ_STYLE.weekly;
+  return(
+    <tr onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{background:isSel?'#EFF6FF':hov?C.hoverRow:C.card,transition:'background .1s',borderBottom:`1px solid ${C.border}`}}>
+      <td style={{padding:'10px 12px',textAlign:'center',width:36}}>
+        <input type="checkbox" checked={isSel} onChange={()=>onSelect(d.sourceId)} style={{accentColor:C.blue,cursor:'pointer',width:13,height:13}}/>
+      </td>
+      <td style={{padding:'10px 12px',maxWidth:220}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{width:30,height:30,borderRadius:7,background:C.blueLt,border:`1px solid ${C.blueMid}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={C.blue} strokeWidth="2" strokeLinecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
+          <div style={{minWidth:0}}>
+            <div onClick={()=>onPreview(d)} title={d.title} style={{fontSize:13,fontWeight:600,color:hov?C.blue:C.text,cursor:'pointer',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:190,transition:'color .12s'}}>
+              {d.title}
+            </div>
+            <div title={d.id} style={{fontSize:10,color:C.textFaint,fontFamily:'monospace',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:190}}>
+              {d.id}
+            </div>
+          </div>
+          {isFav&&<span style={{color:'#F59E0B',flexShrink:0,fontSize:11,lineHeight:1}}>★</span>}
+        </div>
+      </td>
+      <td style={{padding:'10px 12px'}}>
+        <span style={{...ss,fontSize:10.5,fontWeight:700,padding:'2px 8px',borderRadius:20,display:'inline-flex',whiteSpace:'nowrap'}}>{d.srcLabel}</span>
+      </td>
+      <td style={{padding:'10px 12px'}}>
+        <span style={{...fs,fontSize:10.5,fontWeight:600,padding:'2px 8px',borderRadius:20,display:'inline-flex',whiteSpace:'nowrap'}}>{d.freq.charAt(0).toUpperCase()+d.freq.slice(1)}</span>
+      </td>
+      <td style={{padding:'10px 12px',whiteSpace:'nowrap'}}>
+        <span style={{fontSize:13,fontWeight:700,color:C.text,fontVariantNumeric:'tabular-nums'}}>{d.metrics}</span>
+        <span style={{fontSize:10.5,color:C.textFaint,marginLeft:3}}>metrics</span>
+      </td>
+      <td style={{padding:'10px 12px',whiteSpace:'nowrap'}}>
+        <span style={{fontSize:13,fontWeight:600,color:C.textSec,fontVariantNumeric:'tabular-nums'}}>{d.dims.toLocaleString('en-IN')}</span>
+        <span style={{fontSize:10.5,color:C.textFaint,marginLeft:3}}>dims</span>
+      </td>
+      <td style={{padding:'10px 12px',minWidth:100}}>
+        <div style={{fontSize:12.5,color:C.textSec,fontWeight:500}}>{d.updated||'—'}</div>
+        {d.updated&&<div style={{fontSize:10.5,color:C.textFaint,marginTop:1}}>{relativeTime(d.updated)}</div>}
+      </td>
+      <td style={{padding:'10px 12px'}}><StatusPill status={d.status}/></td>
+      <td style={{padding:'10px 12px'}}>
+        <div style={{display:'flex',gap:4}}>
+          <ActionBtn title="Full Analysis" onClick={()=>window.openDetail?.(d.sourceId)}>
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </ActionBtn>
+          <ActionBtn title="Quick Preview" onClick={()=>onPreview(d)}>
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </ActionBtn>
+          <ActionBtn title={isFav?'Unstar':'Star'} onClick={()=>onFav(d.sourceId)}>
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill={isFav?'#F59E0B':'none'} stroke={isFav?'#F59E0B':'currentColor'}/>
+          </ActionBtn>
+          <ActionBtn title="Source files" onClick={()=>openSourceUrlsModal(d.sourceId,d.title)}>
+            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+          </ActionBtn>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function PgBtn({children,disabled,active,onClick,title}){
+  const [hov,setHov]=useState(false);
+  return(
+    <button onClick={onClick} disabled={disabled} title={title} onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{minWidth:30,height:30,padding:'0 7px',borderRadius:6,border:`1px solid ${active?C.blue:C.border}`,background:active?C.blue:hov&&!disabled?C.blueLt:C.card,color:active?'#fff':disabled?C.textFaint:hov?C.blue:C.textSec,fontSize:12.5,fontWeight:active?700:400,cursor:disabled?'not-allowed':'pointer',transition:'all .13s'}}>
+      {children}
+    </button>
+  );
+}
+
+function buildPages(page,total){
+  if(total<=7)return Array.from({length:total},(_,i)=>i+1);
+  if(page<=4) return[1,2,3,4,5,'…',total];
+  if(page>=total-3)return[1,'…',total-4,total-3,total-2,total-1,total];
+  return[1,'…',page-1,page,page+1,'…',total];
+}
+
+// ─── main ─────────────────────────────────────────────────────────────────────
+export default function CatalogPage({isActive}){
+  const w=useWindowWidth();
+  const isMobile=w<640;
+  const isTablet=w>=640&&w<1024;
+
+  const [datasets,setDatasets]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const [enriching,setEnriching]=useState(false);
+  const [error,setError]=useState(null);
+  const [search,setSearch]=useState('');
+  const [srcFilter,setSrcFilter]=useState('all');
+  const [freqFilter,setFreqFilter]=useState('all');
+  const [statusFilter,setStatusFilter]=useState('all');
+  const [sortCol,setSortCol]=useState('created');
+  const [sortDir,setSortDir]=useState('desc');
+  const [page,setPage]=useState(1);
+  const [selected,setSelected]=useState(new Set());
+  const [favorites,setFavorites]=useState(()=>{try{return new Set(JSON.parse(localStorage.getItem('bb-fav')||'[]'));}catch{return new Set();}});
+  const [preview,setPreview]=useState(null);
+  const [filtersOpen,setFiltersOpen]=useState(false);
+  const searchRef=useRef(null);
+  const PAGE_SIZE=isMobile?8:12;
+
+  const toggleFav=useCallback((id)=>{
+    setFavorites(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);try{localStorage.setItem('bb-fav',JSON.stringify([...n]));}catch{}return n;});
+  },[]);
+
+  const toggleSelect=useCallback((id)=>{
+    setSelected(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);return n;});
+  },[]);
+
+  useEffect(()=>{
+    const h=(e)=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();searchRef.current?.focus();}};
+    window.addEventListener('keydown',h);
+    return()=>window.removeEventListener('keydown',h);
+  },[]);
+
+  const loadData=useCallback(async()=>{
+    setLoading(true);setError(null);
+    try{
+      const PG=50;let skip=0;const all=[];
+      while(true){
+        const p=await getDataSources(skip,PG);
+        const rows=Array.isArray(p)?p:(p.items||p.data||[]);
+        if(!rows.length)break;
+        all.push(...rows);
+        if(rows.length<PG)break;
+        skip+=PG;
+      }
+      const mapped=all.map(mapSource).filter(d=>d.sourceId!==11);
+      setDatasets(mapped);window.DATASETS=mapped;setLoading(false);
+      setEnriching(true);
+      const enriched=await Promise.all(mapped.map(async(d)=>{
+        try{
+          const[mr,dt]=await Promise.all([getDataSourceMetrics(d.sourceId),getDataSourceDimensionTypes(d.sourceId)]);
+          let td=0;
+          if(Array.isArray(dt)&&dt.length){const dc=await Promise.all(dt.map(t=>getAllDimensions(t.dimension_type_id||t.id)));td=dc.reduce((s,d)=>s+(Array.isArray(d)?d.length:0),0);}
+          return{...d,metrics:Array.isArray(mr)?mr.length:0,dims:td};
+        }catch{return d;}
+      }));
+      setDatasets(enriched);window.DATASETS=enriched;
+    }catch(err){setError(err.message);setLoading(false);}
+    finally{setEnriching(false);}
+  },[]);
+
+  useEffect(()=>{loadData();},[loadData]);
+
+  const summary=useMemo(()=>({
+    total:datasets.length,
+    active:datasets.filter(d=>d.status==='active').length,
+    metrics:datasets.reduce((s,d)=>s+(d.metrics||0),0),
+    dims:datasets.reduce((s,d)=>s+(d.dims||0),0),
+  }),[datasets]);
+
+  const uniqueSources=useMemo(()=>{const m={};datasets.forEach(d=>{m[d.src]=d.srcLabel;});return m;},[datasets]);
+
+  const handleSort=(col)=>{if(sortCol===col)setSortDir(d=>d==='asc'?'desc':'asc');else{setSortCol(col);setSortDir('asc');}setPage(1);};
+
+  const filtered=useMemo(()=>{
+    let ds=[...datasets];
+    if(srcFilter!=='all')ds=ds.filter(d=>d.src===srcFilter);
+    if(statusFilter!=='all')ds=ds.filter(d=>d.status===statusFilter);
+    if(freqFilter!=='all')ds=ds.filter(d=>d.freq===freqFilter);
+    const q=search.toLowerCase().trim();
+    if(q)ds=ds.filter(d=>d.title.toLowerCase().includes(q)||d.id.toLowerCase().includes(q)||d.srcLabel.toLowerCase().includes(q)||d.desc.toLowerCase().includes(q));
+    const m=sortDir==='asc'?1:-1;
+    const sm={
+      name:(a,b)=>m*a.title.localeCompare(b.title),
+      src:(a,b)=>m*a.srcLabel.localeCompare(b.srcLabel),
+      freq:(a,b)=>m*a.freq.localeCompare(b.freq),
+      metrics:(a,b)=>m*(a.metrics-b.metrics),
+      dims:(a,b)=>m*(a.dims-b.dims),
+      updated:(a,b)=>m*a.updated.localeCompare(b.updated),
+      created:(a,b)=>m*a.createdAt.localeCompare(b.createdAt),
+      status:(a,b)=>m*a.status.localeCompare(b.status),
+    };
+    if(sm[sortCol])ds.sort(sm[sortCol]);
+    return ds;
+  },[datasets,srcFilter,statusFilter,freqFilter,search,sortCol,sortDir]);
+
+  useEffect(()=>{setPage(1);},[search,srcFilter,statusFilter,freqFilter,sortCol,sortDir]);
+
+  const totalPages=Math.ceil(filtered.length/PAGE_SIZE);
+  const paginated=filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
+  const hasFilters=search||srcFilter!=='all'||statusFilter!=='all'||freqFilter!=='all';
+  const allSel=paginated.length>0&&paginated.every(d=>selected.has(d.sourceId));
+
+  const resetFilters=()=>{setSearch('');setSrcFilter('all');setStatusFilter('all');setFreqFilter('all');};
+
+  const selStyle={
+    height:34,padding:'0 28px 0 10px',borderRadius:8,
+    border:`1px solid ${C.border}`,background:C.card,
+    color:C.textSec,fontSize:12.5,fontFamily:'inherit',
+    cursor:'pointer',outline:'none',appearance:'none',
+    backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+    backgroundRepeat:'no-repeat',backgroundPosition:'right 8px center',
+    boxShadow:C.shadowSm,
+  };
+
+  const COLS=[
+    {key:'name',   label:'Dataset',      w:'auto'},
+    {key:'src',    label:'Source',       w:90},
+    {key:'freq',   label:'Frequency',    w:100},
+    {key:'metrics',label:'Metrics',      w:90},
+    {key:'dims',   label:'Dimensions',   w:110},
+    {key:'updated',label:'Last Updated', w:110},
+    {key:'status', label:'Status',       w:90},
+    {key:'actions',label:'Actions',      w:130,noSort:true},
+  ];
+
+  // responsive: on mobile hide some cols
+  const visibleCols=isMobile
+    ?COLS.filter(c=>['name','status','actions'].includes(c.key))
+    :isTablet
+    ?COLS.filter(c=>!['dims'].includes(c.key))
+    :COLS;
+
+  // padding based on screen
+  const px=isMobile?12:isTablet?20:28;
+  const py=isMobile?14:20;
+
+  return(
+    <div className={`page${isActive?' on':''}`} id="page-catalog" style={{background:C.bg,color:C.text,fontFamily:'Inter,-apple-system,BlinkMacSystemFont,sans-serif',overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
+      <div style={{maxWidth:1280,margin:'0 auto',padding:`${py}px ${px}px 36px`}}>
+
+        {/* Header */}
+        <div style={{display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',marginBottom:isMobile?14:18,gap:10,flexWrap:'wrap'}}>
+          <div>
+            <h1 style={{fontSize:isMobile?20:24,fontWeight:700,color:C.text,letterSpacing:'-.4px',margin:0,lineHeight:1.2}}>Dataset Catalog</h1>
+            <p style={{fontSize:isMobile?12:13,color:C.textFaint,margin:'3px 0 0',fontWeight:400}}>Manage datasets, metrics, dimensions and ingestion status.</p>
+          </div>
+         
+        </div>
+
+        {/* Stats Cards */}
+        <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':isTablet?'1fr 1fr':'repeat(4,1fr)',gap:isMobile?8:12,marginBottom:isMobile?14:18}}>
+          <StatCard icon={<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></>} title="Total Datasets" value={loading?0:summary.total} desc="All sources" accent="blue" loading={loading} enriching={false} isMobile={isMobile}/>
+          <StatCard icon={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} title="Active" value={loading?0:summary.active} desc="Healthy & syncing" accent="green" loading={loading} enriching={false} isMobile={isMobile}/>
+          <StatCard icon={<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>} title="Total Metrics" value={loading?0:summary.metrics} desc="Across datasets" accent="purple" loading={loading} enriching={enriching} isMobile={isMobile}/>
+          <StatCard icon={<><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></>} title="Dimensions" value={loading?0:summary.dims} desc="Unique values" accent="orange" loading={loading} enriching={enriching} isMobile={isMobile}/>
+        </div>
+
+        {/* Search + Filters */}
+        <div style={{display:'flex',gap:8,marginBottom:10,flexWrap:'wrap',alignItems:'center'}}>
+          <div style={{flex:1,minWidth:isMobile?'100%':200,position:'relative',display:'flex',alignItems:'center'}}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke={C.textFaint} strokeWidth="2" strokeLinecap="round" style={{position:'absolute',left:11,pointerEvents:'none'}}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input ref={searchRef} value={search} onChange={e=>setSearch(e.target.value)}
+              placeholder={isMobile?'Search…':'Search datasets, sources…'}
+              style={{width:'100%',height:36,padding:'0 32px 0 34px',border:`1.5px solid ${C.border}`,borderRadius:9,background:C.card,color:C.text,fontSize:13,fontFamily:'inherit',outline:'none',boxShadow:C.shadowSm,transition:'border-color .15s,box-shadow .15s'}}
+              onFocus={e=>{e.target.style.borderColor=C.blue;e.target.style.boxShadow=`0 0 0 3px rgba(37,99,235,.1)`;}}
+              onBlur={e=>{e.target.style.borderColor=C.border;e.target.style.boxShadow=C.shadowSm;}}
+            />
+            {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:9,background:'none',border:'none',cursor:'pointer',color:C.textFaint,display:'flex',padding:2}}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>}
+          </div>
+
+          {/* filters — on mobile collapse into a button */}
+          {isMobile?(
+            <>
+              {/* <button onClick={()=>setFiltersOpen(o=>!o)} style={{height:36,padding:'0 12px',borderRadius:9,border:`1.5px solid ${filtersOpen||hasFilters?C.blue:C.border}`,background:filtersOpen||hasFilters?C.blueLt:C.card,color:filtersOpen||hasFilters?C.blue:C.textSec,fontSize:12.5,fontWeight:500,cursor:'pointer',display:'flex',alignItems:'center',gap:5,boxShadow:C.shadowSm}}>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                Filters{hasFilters?' ·':''}{(srcFilter!=='all'?1:0)+(freqFilter!=='all'?1:0)+(statusFilter!=='all'?1:0)>0?` ${(srcFilter!=='all'?1:0)+(freqFilter!=='all'?1:0)+(statusFilter!=='all'?1:0)}`:''}
+              </button> */}
+              {filtersOpen&&(
+                <div style={{width:'100%',display:'flex',gap:8,flexWrap:'wrap'}}>
+                  <select value={srcFilter} onChange={e=>setSrcFilter(e.target.value)} style={{...selStyle,flex:1,minWidth:110}}>
+                    <option value="all">All Sources</option>
+                    {Object.entries(uniqueSources).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+                  </select>
+                  <select value={freqFilter} onChange={e=>setFreqFilter(e.target.value)} style={{...selStyle,flex:1,minWidth:110}}>
+                    <option value="all">All Frequencies</option>
+                    <option value="daily">Daily</option><option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option><option value="quarterly">Quarterly</option>
+                  </select>
+                  <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{...selStyle,flex:1,minWidth:100}}>
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option><option value="inactive">Inactive</option>
+                  </select>
+                  {hasFilters&&<button onClick={resetFilters} style={{height:34,padding:'0 10px',borderRadius:8,border:`1px solid ${C.border}`,background:'none',color:C.danger,fontSize:12,cursor:'pointer'}}>Reset</button>}
+                </div>
+              )}
+            </>
+          ):(
+            <>
+              <select value={srcFilter} onChange={e=>setSrcFilter(e.target.value)} style={selStyle}>
+                <option value="all">All Sources</option>
+                {Object.entries(uniqueSources).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+              </select>
+              <select value={freqFilter} onChange={e=>setFreqFilter(e.target.value)} style={selStyle}>
+                <option value="all">All Frequencies</option>
+                <option value="daily">Daily</option><option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option><option value="quarterly">Quarterly</option>
+              </select>
+              <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={selStyle}>
+                <option value="all">All Status</option>
+                <option value="active">Active</option><option value="inactive">Inactive</option>
+              </select>
+              {hasFilters&&(
+                <button onClick={resetFilters} style={{height:34,padding:'0 10px',borderRadius:8,border:`1px solid ${C.border}`,background:'none',color:C.danger,fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}} onMouseOver={e=>e.currentTarget.style.borderColor='#FCA5A5'} onMouseOut={e=>e.currentTarget.style.borderColor=C.border}>
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Reset
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Bulk bar */}
+        {selected.size>0&&(
+          <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',marginBottom:10,background:C.blueLt,border:`1px solid ${C.blueMid}`,borderRadius:9,flexWrap:'wrap'}}>
+            <span style={{fontSize:12.5,fontWeight:600,color:C.blue}}>{selected.size} selected</span>
+            <button onClick={()=>exportCSV(datasets.filter(d=>selected.has(d.sourceId)))} style={{height:28,padding:'0 10px',borderRadius:7,border:`1px solid ${C.blueMid}`,background:C.card,color:C.blue,fontSize:12,fontWeight:500,cursor:'pointer'}}>Export CSV</button>
+            <button onClick={()=>setSelected(new Set())} style={{marginLeft:'auto',height:28,padding:'0 10px',borderRadius:7,border:`1px solid ${C.blueMid}`,background:'none',color:C.blue,fontSize:12,cursor:'pointer'}}>Deselect All</button>
+          </div>
+        )}
+
+        {/* Table card */}
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,boxShadow:C.shadowMd,overflow:'hidden'}}>
+
+          {/* Table top bar */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:`1px solid ${C.border}`}}>
+            <div style={{fontSize:12.5,color:C.textMut}}>
+              {loading?'Loading…':<>
+                <span style={{fontWeight:600,color:C.text}}>{filtered.length.toLocaleString('en-IN')}</span>
+                {filtered.length!==datasets.length&&<span style={{color:C.textFaint}}> of {datasets.length}</span>}
+                <span> dataset{filtered.length!==1?'s':''}</span>
+                {enriching&&<span style={{marginLeft:6,fontSize:10.5,color:C.textFaint}}>· loading counts…</span>}
+              </>}
+            </div>
+            {favorites.size>0&&<span style={{fontSize:11,fontWeight:600,background:'#FFFBEB',color:'#92400E',border:'1px solid #FDE68A',padding:'2px 8px',borderRadius:20}}>★ {favorites.size} starred</span>}
+          </div>
+
+          {/* Table */}
+          <div style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
+            <table style={{width:'100%',borderCollapse:'collapse',minWidth:isMobile?360:860}}>
+              <thead>
+                <tr style={{background:C.hdr}}>
+                  <th style={{width:36,padding:'9px 12px',borderBottom:`1px solid ${C.border}`}}>
+                    <input type="checkbox" checked={allSel} onChange={()=>{if(allSel)setSelected(prev=>{const n=new Set(prev);paginated.forEach(d=>n.delete(d.sourceId));return n;});else setSelected(prev=>{const n=new Set(prev);paginated.forEach(d=>n.add(d.sourceId));return n;});}} style={{accentColor:C.blue,cursor:'pointer',width:13,height:13}}/>
+                  </th>
+                  {visibleCols.map(col=>(
+                    <th key={col.key} onClick={col.noSort?undefined:()=>handleSort(col.key)} style={{padding:'9px 12px',textAlign:'left',fontSize:10.5,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:sortCol===col.key?C.blue:C.textMut,borderBottom:`1px solid ${C.border}`,cursor:col.noSort?'default':'pointer',whiteSpace:'nowrap',userSelect:'none',transition:'color .13s',width:col.w||'auto'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:4}}>
+                        {col.label}
+                        {!col.noSort&&<SortIcon active={sortCol===col.key} dir={sortDir}/>}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading
+                  ?[...Array(isMobile?5:8)].map((_,i)=><SkeletonRow key={i}/>)
+                  :error
+                  ?<tr><td colSpan={visibleCols.length+1} style={{padding:'40px 16px',textAlign:'center'}}>
+                    <div style={{fontSize:13,fontWeight:600,color:C.danger,marginBottom:6}}>Failed to load</div>
+                    <div style={{fontSize:11.5,color:C.textMut,marginBottom:12}}>{error}</div>
+                    <button onClick={loadData} style={{padding:'6px 14px',borderRadius:8,background:C.blue,color:'#fff',border:'none',fontSize:12,fontWeight:600,cursor:'pointer'}}>Retry</button>
+                  </td></tr>
+                  :filtered.length===0
+                  ?<tr><td colSpan={visibleCols.length+1}>
+                    <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'48px 16px',gap:10}}>
+                      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke={C.borderStr} strokeWidth="1.2" strokeLinecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+                      <div style={{fontSize:14,fontWeight:700,color:C.textSec}}>No datasets found</div>
+                      <div style={{fontSize:12.5,color:C.textMut,textAlign:'center',maxWidth:280}}>Try adjusting your filters or search query.</div>
+                      {hasFilters&&<button onClick={resetFilters} style={{marginTop:4,padding:'6px 16px',borderRadius:8,background:C.blue,color:'#fff',border:'none',fontSize:12,fontWeight:600,cursor:'pointer'}}>Reset Filters</button>}
+                    </div>
+                  </td></tr>
+                  :paginated.map(d=>(
+                    <TableRow
+                      key={d.id} d={d}
+                      isSel={selected.has(d.sourceId)}
+                      isFav={favorites.has(d.sourceId)}
+                      onSelect={toggleSelect}
+                      onFav={toggleFav}
+                      onPreview={setPreview}
+                    />
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {!loading&&!error&&filtered.length>PAGE_SIZE&&(
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderTop:`1px solid ${C.border}`,flexWrap:'wrap',gap:8}}>
+              <span style={{fontSize:12,color:C.textMut}}>{(page-1)*PAGE_SIZE+1}–{Math.min(page*PAGE_SIZE,filtered.length)} of {filtered.length}</span>
+              <div style={{display:'flex',gap:4,alignItems:'center',flexWrap:'wrap'}}>
+                <PgBtn disabled={page===1} onClick={()=>setPage(1)}>«</PgBtn>
+                <PgBtn disabled={page===1} onClick={()=>setPage(p=>p-1)}>‹</PgBtn>
+                {!isMobile&&buildPages(page,totalPages).map((p,i)=>
+                  p==='…'
+                    ?<span key={`e${i}`} style={{padding:'0 3px',color:C.textFaint,fontSize:12}}>…</span>
+                    :<PgBtn key={p} active={p===page} onClick={()=>setPage(p)}>{p}</PgBtn>
+                )}
+                {isMobile&&<span style={{fontSize:12,color:C.textMut,padding:'0 6px'}}>{page}/{totalPages}</span>}
+                <PgBtn disabled={page===totalPages} onClick={()=>setPage(p=>p+1)}>›</PgBtn>
+                <PgBtn disabled={page===totalPages} onClick={()=>setPage(totalPages)}>»</PgBtn>
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {preview&&<PreviewDrawer ds={preview} onClose={()=>setPreview(null)} favorites={favorites} toggleFav={toggleFav}/>}
     </div>
   );
 }
