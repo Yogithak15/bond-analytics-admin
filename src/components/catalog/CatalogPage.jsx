@@ -1,42 +1,78 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getDataSources, getDataSourceMetrics, getDataSourceDimensionTypes, getAllDimensions, getDataSourceUrls } from '../../api/bond_api';
+import { useThemeWatcher } from '../../hooks/useThemeWatcher';
 
-// ─── design tokens ────────────────────────────────────────────────────────────
+// ─── design tokens — all CSS vars so they auto-adapt to any theme ─────────────
 const C = {
-  blue:'#2563EB', blueLt:'#EFF6FF', blueMid:'#DBEAFE',
-  text:'#111827', textSec:'#374151', textMut:'#6B7280', textFaint:'#9CA3AF',
-  bg:'#F8FAFC', card:'#FFFFFF', hdr:'#F9FAFB',
+  blue:'var(--blue)', blueLt:'var(--blue-s)', blueMid:'#DBEAFE',
+  text:'var(--tx)', textSec:'var(--tx2)', textMut:'var(--tx3)', textFaint:'var(--tx4)',
+  bg:'var(--bg)', card:'var(--sf)', hdr:'#F9FAFB',
   border:'#E5E7EB', borderStr:'#D1D5DB', hoverRow:'#F5F9FF',
-  success:'#22C55E', successLt:'#F0FDF4',
-  danger:'#EF4444',
-  shadowSm:'0 1px 2px rgba(0,0,0,.05)',
-  shadowMd:'0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -1px rgba(0,0,0,.05)',
+  success:'var(--green)', successLt:'var(--green-s)',
+  danger:'var(--red)',
+  shadowSm:'var(--shsm)',
+  shadowMd:'var(--shmd)',
   shadowHov:'0 8px 20px -4px rgba(37,99,235,.15)',
 };
 
-const SRC_STYLE = {
-  rbi:  {background:'#EFF6FF',color:'#1D4ED8',border:'1px solid #BFDBFE'},
-  nse:  {background:'#F0FDF4',color:'#166534',border:'1px solid #BBF7D0'},
-  sebi: {background:'#FFFBEB',color:'#92400E',border:'1px solid #FDE68A'},
-  ccil: {background:'#F5F3FF',color:'#5B21B6',border:'1px solid #DDD6FE'},
-  fbil: {background:'#ECFEFF',color:'#155E75',border:'1px solid #A5F3FC'},
-  bse:  {background:'#FFF7ED',color:'#9A3412',border:'1px solid #FED7AA'},
-  amfi: {background:'#FDF4FF',color:'#6B21A8',border:'1px solid #E9D5FF'},
-  other:{background:'#F9FAFB',color:'#374151',border:'1px solid #E5E7EB'},
-};
-const FREQ_STYLE = {
-  daily:    {background:'#F0FDF4',color:'#166534',border:'1px solid #BBF7D0'},
-  weekly:   {background:'#EFF6FF',color:'#1D4ED8',border:'1px solid #BFDBFE'},
-  monthly:  {background:'#FFFBEB',color:'#92400E',border:'1px solid #FDE68A'},
-  quarterly:{background:'#F5F3FF',color:'#5B21B6',border:'1px solid #DDD6FE'},
-  yearly:   {background:'#FFF7ED',color:'#9A3412',border:'1px solid #FED7AA'},
-};
-const STATUS_CFG = {
-  active:  {bg:'#F0FDF4',color:'#166534',dot:'#22C55E',label:'Active'},
-  inactive:{bg:'#F9FAFB',color:'#6B7280',dot:'#9CA3AF',label:'Inactive'},
-  pending: {bg:'#FFFBEB',color:'#92400E',dot:'#F59E0B',label:'Pending'},
-  failed:  {bg:'#FEF2F2',color:'#991B1B',dot:'#EF4444',label:'Failed'},
-};
+// Badge style maps — computed per-theme inside the component (see mkBadgeStyles)
+function mkBadgeStyles(isDark) {
+  const SRC = isDark ? {
+    rbi:  {background:'rgba(37,99,235,.18)', color:'#93C5FD',border:'1px solid rgba(37,99,235,.35)'},
+    nse:  {background:'rgba(22,163,74,.18)',  color:'#86EFAC',border:'1px solid rgba(22,163,74,.35)'},
+    sebi: {background:'rgba(245,158,11,.18)', color:'#FCD34D',border:'1px solid rgba(245,158,11,.35)'},
+    ccil: {background:'rgba(109,63,192,.18)', color:'#C4B5FD',border:'1px solid rgba(109,63,192,.35)'},
+    fbil: {background:'rgba(14,116,144,.18)', color:'#67E8F9', border:'1px solid rgba(14,116,144,.35)'},
+    bse:  {background:'rgba(234,88,12,.18)',  color:'#FDBA74', border:'1px solid rgba(234,88,12,.35)'},
+    amfi: {background:'rgba(107,33,168,.18)', color:'#D8B4FE',border:'1px solid rgba(107,33,168,.35)'},
+    other:{background:'rgba(107,114,128,.18)',color:'#D1D5DB',border:'1px solid rgba(107,114,128,.35)'},
+  } : {
+    rbi:  {background:'#EFF6FF',color:'#1D4ED8',border:'1px solid #BFDBFE'},
+    nse:  {background:'#F0FDF4',color:'#166534',border:'1px solid #BBF7D0'},
+    sebi: {background:'#FFFBEB',color:'#92400E',border:'1px solid #FDE68A'},
+    ccil: {background:'#F5F3FF',color:'#5B21B6',border:'1px solid #DDD6FE'},
+    fbil: {background:'#ECFEFF',color:'#155E75',border:'1px solid #A5F3FC'},
+    bse:  {background:'#FFF7ED',color:'#9A3412',border:'1px solid #FED7AA'},
+    amfi: {background:'#FDF4FF',color:'#6B21A8',border:'1px solid #E9D5FF'},
+    other:{background:'#F9FAFB',color:'#374151',border:'1px solid #E5E7EB'},
+  };
+  const FREQ = isDark ? {
+    daily:    {background:'rgba(22,163,74,.18)',  color:'#86EFAC',border:'1px solid rgba(22,163,74,.35)'},
+    weekly:   {background:'rgba(37,99,235,.18)',  color:'#93C5FD',border:'1px solid rgba(37,99,235,.35)'},
+    monthly:  {background:'rgba(245,158,11,.18)', color:'#FCD34D',border:'1px solid rgba(245,158,11,.35)'},
+    quarterly:{background:'rgba(109,63,192,.18)', color:'#C4B5FD',border:'1px solid rgba(109,63,192,.35)'},
+    yearly:   {background:'rgba(234,88,12,.18)',  color:'#FDBA74', border:'1px solid rgba(234,88,12,.35)'},
+  } : {
+    daily:    {background:'#F0FDF4',color:'#166534',border:'1px solid #BBF7D0'},
+    weekly:   {background:'#EFF6FF',color:'#1D4ED8',border:'1px solid #BFDBFE'},
+    monthly:  {background:'#FFFBEB',color:'#92400E',border:'1px solid #FDE68A'},
+    quarterly:{background:'#F5F3FF',color:'#5B21B6',border:'1px solid #DDD6FE'},
+    yearly:   {background:'#FFF7ED',color:'#9A3412',border:'1px solid #FED7AA'},
+  };
+  const STATUS = isDark ? {
+    active:  {bg:'rgba(22,163,74,.18)',  color:'#86EFAC',dot:'#4ADE80',label:'Active'},
+    inactive:{bg:'rgba(107,114,128,.18)',color:'#9CA3AF',dot:'#6B7280',label:'Inactive'},
+    pending: {bg:'rgba(245,158,11,.18)', color:'#FCD34D',dot:'#FBBF24',label:'Pending'},
+    failed:  {bg:'rgba(239,68,68,.18)',  color:'#FCA5A5',dot:'#F87171',label:'Failed'},
+  } : {
+    active:  {bg:'#F0FDF4',color:'#166534',dot:'#22C55E',label:'Active'},
+    inactive:{bg:'#F9FAFB',color:'#6B7280',dot:'#9CA3AF',label:'Inactive'},
+    pending: {bg:'#FFFBEB',color:'#92400E',dot:'#F59E0B',label:'Pending'},
+    failed:  {bg:'#FEF2F2',color:'#991B1B',dot:'#EF4444',label:'Failed'},
+  };
+  const ACCENT = isDark ? {
+    blue:  {bg:'rgba(37,99,235,.2)',  ic:'#93C5FD'},
+    green: {bg:'rgba(22,163,74,.2)',  ic:'#86EFAC'},
+    purple:{bg:'rgba(109,63,192,.2)', ic:'#C4B5FD'},
+    orange:{bg:'rgba(217,119,6,.2)',  ic:'#FCD34D'},
+  } : {
+    blue:  {bg:'#EFF6FF',ic:'#2563EB'},
+    green: {bg:'#DCFCE7',ic:'#16A34A'},
+    purple:{bg:'#EDE9FE',ic:'#7C3AED'},
+    orange:{bg:'#FEF3C7',ic:'#D97706'},
+  };
+  return { SRC, FREQ, STATUS, ACCENT };
+}
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function useWindowWidth() {
@@ -134,14 +170,20 @@ async function openSourceUrlsModal(sourceId, title) {
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
-function StatCard({ icon, title, value, desc, accent, loading, enriching, isMobile }) {
+function StatCard({ icon, title, value, desc, accent, loading, enriching, isMobile, isDark }) {
   const [hov,setHov]=useState(false);
-  const a={
+  const ACCENT = isDark ? {
+    blue:  {bg:'rgba(37,99,235,.2)',  ic:'#93C5FD'},
+    green: {bg:'rgba(22,163,74,.2)',  ic:'#86EFAC'},
+    purple:{bg:'rgba(109,63,192,.2)', ic:'#C4B5FD'},
+    orange:{bg:'rgba(217,119,6,.2)',  ic:'#FCD34D'},
+  } : {
     blue:  {bg:'#EFF6FF',ic:'#2563EB'},
     green: {bg:'#DCFCE7',ic:'#16A34A'},
     purple:{bg:'#EDE9FE',ic:'#7C3AED'},
     orange:{bg:'#FEF3C7',ic:'#D97706'},
-  }[accent]||{bg:'#EFF6FF',ic:'#2563EB'};
+  };
+  const a=ACCENT[accent]||ACCENT.blue;
   return(
     <div onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{
       background:C.card,border:`1px solid ${hov?C.borderStr:C.border}`,
@@ -169,8 +211,19 @@ function StatCard({ icon, title, value, desc, accent, loading, enriching, isMobi
   );
 }
 
-function StatusPill({status}){
-  const cfg=STATUS_CFG[status]||STATUS_CFG.inactive;
+function StatusPill({status,isDark}){
+  const STATUS = isDark ? {
+    active:  {bg:'rgba(22,163,74,.18)',  color:'#86EFAC',dot:'#4ADE80',label:'Active'},
+    inactive:{bg:'rgba(107,114,128,.18)',color:'#9CA3AF',dot:'#6B7280',label:'Inactive'},
+    pending: {bg:'rgba(245,158,11,.18)', color:'#FCD34D',dot:'#FBBF24',label:'Pending'},
+    failed:  {bg:'rgba(239,68,68,.18)',  color:'#FCA5A5',dot:'#F87171',label:'Failed'},
+  } : {
+    active:  {bg:'#F0FDF4',color:'#166534',dot:'#22C55E',label:'Active'},
+    inactive:{bg:'#F9FAFB',color:'#6B7280',dot:'#9CA3AF',label:'Inactive'},
+    pending: {bg:'#FFFBEB',color:'#92400E',dot:'#F59E0B',label:'Pending'},
+    failed:  {bg:'#FEF2F2',color:'#991B1B',dot:'#EF4444',label:'Failed'},
+  };
+  const cfg=STATUS[status]||STATUS.inactive;
   return(
     <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:11.5,fontWeight:600,padding:'3px 9px',borderRadius:20,background:cfg.bg,color:cfg.color,whiteSpace:'nowrap'}}>
       <span style={{width:5,height:5,borderRadius:'50%',background:cfg.dot,flexShrink:0}}/>
@@ -217,8 +270,9 @@ function SkeletonRow(){
   );
 }
 
-function PreviewDrawer({ds,onClose,favorites,toggleFav}){
+function PreviewDrawer({ds,onClose,favorites,toggleFav,isDark}){
   const fav=favorites.has(ds.sourceId);
+  const {SRC}=mkBadgeStyles(isDark);
   return(
     <>
       <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.18)',zIndex:999,backdropFilter:'blur(2px)'}}/>
@@ -226,8 +280,8 @@ function PreviewDrawer({ds,onClose,favorites,toggleFav}){
         <div style={{padding:'16px 18px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'flex-start',gap:10,flexShrink:0}}>
           <div style={{flex:1,minWidth:0}}>
             <div style={{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap'}}>
-              <span style={{...SRC_STYLE[ds.src]||SRC_STYLE.other,fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,display:'inline-flex'}}>{ds.srcLabel}</span>
-              <StatusPill status={ds.status}/>
+              <span style={{...SRC[ds.src]||SRC.other,fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,display:'inline-flex'}}>{ds.srcLabel}</span>
+              <StatusPill status={ds.status} isDark={isDark}/>
             </div>
             <div style={{fontSize:15,fontWeight:700,color:C.text,lineHeight:1.3}}>{ds.title}</div>
             <div style={{fontSize:10.5,color:C.textFaint,fontFamily:'monospace',marginTop:3}}>{ds.id}</div>
@@ -266,10 +320,11 @@ function PreviewDrawer({ds,onClose,favorites,toggleFav}){
   );
 }
 
-function TableRow({d,isFav,onFav,onPreview}){
+function TableRow({d,isFav,onFav,onPreview,isDark}){
   const [hov,setHov]=useState(false);
-  const ss=SRC_STYLE[d.src]||SRC_STYLE.other;
-  const fs=FREQ_STYLE[d.freq]||FREQ_STYLE.weekly;
+  const {SRC,FREQ}=mkBadgeStyles(isDark);
+  const ss=SRC[d.src]||SRC.other;
+  const fs=FREQ[d.freq]||FREQ.weekly;
   return(
     <tr onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{background:hov?C.hoverRow:C.card,transition:'background .1s',borderBottom:`1px solid ${C.border}`}}>
       <td style={{padding:'10px 12px',maxWidth:220}}>
@@ -306,7 +361,7 @@ function TableRow({d,isFav,onFav,onPreview}){
         <div style={{fontSize:12.5,color:C.textSec,fontWeight:500}}>{d.updated||'—'}</div>
         {d.updated&&<div style={{fontSize:10.5,color:C.textFaint,marginTop:1}}>{relativeTime(d.updated)}</div>}
       </td>
-      <td style={{padding:'10px 12px'}}><StatusPill status={d.status}/></td>
+      <td style={{padding:'10px 12px'}}><StatusPill status={d.status} isDark={isDark}/></td>
       <td style={{padding:'10px 12px'}}>
         <div style={{display:'flex',gap:4}}>
           <ActionBtn title="Full Analysis" onClick={()=>window.openDetail?.(d.sourceId)}>
@@ -345,6 +400,15 @@ function buildPages(page,total){
 
 // ─── main ─────────────────────────────────────────────────────────────────────
 export default function CatalogPage({isActive}){
+  useThemeWatcher();
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  // Override structural colors — the app's --bdr vars are too strong for this page's design
+  C.border    = isDark ? 'rgba(255,255,255,.1)'  : '#E5E7EB';
+  C.borderStr = isDark ? 'rgba(255,255,255,.18)' : '#D1D5DB';
+  C.hdr       = isDark ? 'rgba(255,255,255,.04)' : '#F9FAFB';
+  C.hoverRow  = isDark ? 'rgba(255,255,255,.05)' : '#F5F9FF';
+  C.blueMid   = isDark ? 'rgba(37,99,235,.3)'    : '#DBEAFE';
+  C.shadowHov = isDark ? '0 8px 20px rgba(37,99,235,.3)' : '0 8px 20px -4px rgba(37,99,235,.15)';
   const w=useWindowWidth();
   const isMobile=w<640;
   const isTablet=w>=640&&w<1024;
@@ -494,10 +558,10 @@ export default function CatalogPage({isActive}){
 
         {/* Stats Cards */}
         <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':isTablet?'1fr 1fr':'repeat(4,1fr)',gap:isMobile?8:12,marginBottom:isMobile?14:18}}>
-          <StatCard icon={<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></>} title="Total Datasets" value={loading?0:summary.total} desc="All sources" accent="blue" loading={loading} enriching={false} isMobile={isMobile}/>
-          <StatCard icon={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} title="Active" value={loading?0:summary.active} desc="Datasets" accent="green" loading={loading} enriching={false} isMobile={isMobile}/>
-          <StatCard icon={<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>} title="Total Metrics" value={loading?0:summary.metrics} desc="Across datasets" accent="purple" loading={loading} enriching={enriching} isMobile={isMobile}/>
-          <StatCard icon={<><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></>} title="Dimensions" value={loading?0:summary.dims} desc="Unique values" accent="orange" loading={loading} enriching={enriching} isMobile={isMobile}/>
+          <StatCard icon={<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></>} title="Total Datasets" value={loading?0:summary.total} desc="All sources" accent="blue" loading={loading} enriching={false} isMobile={isMobile} isDark={isDark}/>
+          <StatCard icon={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} title="Active" value={loading?0:summary.active} desc="Datasets" accent="green" loading={loading} enriching={false} isMobile={isMobile} isDark={isDark}/>
+          <StatCard icon={<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>} title="Total Metrics" value={loading?0:summary.metrics} desc="Across datasets" accent="purple" loading={loading} enriching={enriching} isMobile={isMobile} isDark={isDark}/>
+          <StatCard icon={<><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></>} title="Dimensions" value={loading?0:summary.dims} desc="Unique values" accent="orange" loading={loading} enriching={enriching} isMobile={isMobile} isDark={isDark}/>
         </div>
 
         {/* Search + Filters */}
@@ -621,6 +685,7 @@ export default function CatalogPage({isActive}){
                       isFav={favorites.has(d.sourceId)}
                       onFav={toggleFav}
                       onPreview={setPreview}
+                      isDark={isDark}
                     />
                   ))
                 }
@@ -650,7 +715,7 @@ export default function CatalogPage({isActive}){
 
       </div>
 
-      {preview&&<PreviewDrawer ds={preview} onClose={()=>setPreview(null)} favorites={favorites} toggleFav={toggleFav}/>}
+      {preview&&<PreviewDrawer ds={preview} onClose={()=>setPreview(null)} favorites={favorites} toggleFav={toggleFav} isDark={isDark}/>}
     </div>
   );
 }
