@@ -186,8 +186,12 @@ export default function DatasetDetailPage({ isActive }) {
     return opts?.find(s => s.value === displayScale) ?? { label: 'Raw', value: 'raw', divisor: 1, suffix: '' };
   }, [currency, displayScale]);
   const fmtVal = useCallback((v) => {
-    if (unit === 'amount' && currentScaleObj.divisor > 1) {
-      return (v / currentScaleObj.divisor).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + ' ' + currentScaleObj.suffix;
+    if (unit === 'amount') {
+      if (currentScaleObj.divisor > 1) {
+        return (v / currentScaleObj.divisor).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + ' ' + currentScaleObj.suffix;
+      }
+      // Raw — show actual number, no M/K abbreviation
+      return Number(v).toLocaleString('en-IN', { maximumFractionDigits: 2 });
     }
     return fmt(v, unit);
   }, [unit, currentScaleObj]);
