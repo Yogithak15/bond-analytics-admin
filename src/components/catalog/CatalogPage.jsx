@@ -189,7 +189,6 @@ function StatCard({ icon, title, value, desc, accent, loading, enriching, isMobi
       background:C.card,border:`1px solid ${hov?C.borderStr:C.border}`,
       borderRadius:10,padding:isMobile?'14px 16px':'16px 18px',
       display:'flex',alignItems:'center',gap:14,
-      boxShadow:hov?C.shadowHov:C.shadowSm,
       transform:hov?'translateY(-2px)':'translateY(0)',
       transition:'all .18s ease',
     }}>
@@ -329,9 +328,6 @@ function TableRow({d,isFav,onFav,onPreview,isDark}){
     <tr onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{background:hov?C.hoverRow:C.card,transition:'background .1s',borderBottom:`1px solid ${C.border}`}}>
       <td style={{padding:'10px 12px',maxWidth:220}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <div style={{width:30,height:30,borderRadius:7,background:C.blueLt,border:`1px solid ${C.blueMid}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={C.blue} strokeWidth="2" strokeLinecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
-          </div>
           <div style={{minWidth:0}}>
             <div onClick={()=>onPreview(d)} title={d.title} style={{fontSize:13,fontWeight:600,color:hov?C.blue:C.text,cursor:'pointer',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:190,transition:'color .12s'}}>
               {d.title}
@@ -370,9 +366,9 @@ function TableRow({d,isFav,onFav,onPreview,isDark}){
           <ActionBtn title="Quick Preview" onClick={()=>onPreview(d)}>
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
           </ActionBtn>
-          <ActionBtn title={isFav?'Unstar':'Star'} onClick={()=>onFav(d.sourceId)}>
+          {/* <ActionBtn title={isFav?'Unstar':'Star'} onClick={()=>onFav(d.sourceId)}>
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill={isFav?'#F59E0B':'none'} stroke={isFav?'#F59E0B':'currentColor'}/>
-          </ActionBtn>
+          </ActionBtn> */}
           <ActionBtn title="Source files" onClick={()=>openSourceUrlsModal(d.sourceId,d.title)}>
             <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
           </ActionBtn>
@@ -631,20 +627,17 @@ export default function CatalogPage({isActive}){
         </div>
 
         {/* Table card */}
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,boxShadow:C.shadowMd,overflow:'hidden'}}>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,overflow:'hidden'}}>
 
           {/* Table top bar */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:`1px solid ${C.border}`}}>
+          {/* <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:`1px solid ${C.border}`}}>
             <div style={{fontSize:12.5,color:C.textMut}}>
               {loading?'Loading…':<>
-                <span style={{fontWeight:600,color:C.text}}>{filtered.length.toLocaleString('en-IN')}</span>
-                {filtered.length!==datasets.length&&<span style={{color:C.textFaint}}> of {datasets.length}</span>}
                 <span> dataset{filtered.length!==1?'s':''}</span>
                 {enriching&&<span style={{marginLeft:6,fontSize:10.5,color:C.textFaint}}>· loading counts…</span>}
               </>}
             </div>
-            {favorites.size>0&&<span style={{fontSize:11,fontWeight:600,background:'#FFFBEB',color:'#92400E',border:'1px solid #FDE68A',padding:'2px 8px',borderRadius:20}}>★ {favorites.size} starred</span>}
-          </div>
+          </div> */}
 
           {/* Table */}
           <div style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>

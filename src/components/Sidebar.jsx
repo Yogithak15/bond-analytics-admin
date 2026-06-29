@@ -370,7 +370,7 @@ export default function Sidebar({ mobileNavOpen, onMobileNavClose, activePage })
         .sb-collapsed .sb-collapse-btn{margin-left:0}
 
         /* ── Brand ── */
-        .sb-brand{display:flex;align-items:center;gap:10px;padding:14px 14px 10px;flex-shrink:0}
+        .sb-brand{display:flex;align-items:center;gap:10px;padding:14px 2px 10px;flex-shrink:0}
         .sb-brand-icon{width:32px;height:32px;border-radius:9px;
           background:linear-gradient(145deg,#3a6fd8,#1e4fad);
           display:flex;align-items:center;justify-content:center;flex-shrink:0;
@@ -409,24 +409,24 @@ export default function Sidebar({ mobileNavOpen, onMobileNavClose, activePage })
 
         /* ── Footer items ── */
         .sb-footer{display:flex;flex-direction:column;gap:1px;
-          padding:4px 8px 2px;border-top:1px solid var(--bdr,rgba(255,255,255,.06));flex-shrink:0}
+          padding:4px 8px 2px;border-top:1px solid rgba(128,128,128,.15);flex-shrink:0}
 
         /* ── Theme Studio section ── */
         .sb-ts-section{flex-shrink:0;padding:2px 8px 10px;
-          border-top:1px solid var(--bdr,rgba(255,255,255,.06))}
+          border-top:1px solid rgba(128,128,128,.15)}
         .sb-ts-toggle{display:flex;align-items:center;gap:9px;padding:7px 10px;
           border-radius:10px;cursor:pointer;transition:background .13s}
         .sb-ts-toggle:hover{background:rgba(255,255,255,.06)}
 
         /* Light theme overrides — sidebar is now light bg */
         [data-theme="light"] .sb-item:hover{background:rgba(26,47,85,.07)!important;color:#1e3a6a}
-        [data-theme="light"] .sb-item.on{background:rgba(26,47,85,.10)!important;color:#0a1a30}
+        [data-theme="light"] .sb-item.on{color:#0a1a30}
         [data-theme="light"] .sb-ts-toggle:hover{background:rgba(26,47,85,.06)!important}
         [data-theme="light"] .sb-search{background:rgba(26,47,85,.05)!important;border-color:rgba(26,47,85,.12)!important}
         [data-theme="light"] .sb-search-kbd{background:rgba(26,47,85,.07)!important;border-color:rgba(26,47,85,.14)!important}
         [data-theme="light"] .sb-ts-icon{background:rgba(26,47,85,.08)!important}
-        [data-theme="light"] .sb-footer{border-top-color:rgba(26,47,85,.10)!important}
-        [data-theme="light"] .sb-ts-section{border-top-color:rgba(26,47,85,.10)!important}
+        [data-theme="light"] .sb-footer{border-top-color:rgba(0,0,0,.09)!important}
+        [data-theme="light"] .sb-ts-section{border-top-color:rgba(0,0,0,.09)!important}
         [data-theme="light"] .sb-rule{background:rgba(26,47,85,.10)!important}
         .sb-ts-icon{width:28px;height:28px;border-radius:8px;background:var(--sf2,rgba(255,255,255,.08));
           display:flex;align-items:center;justify-content:center;flex-shrink:0}
