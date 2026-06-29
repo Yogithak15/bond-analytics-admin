@@ -80,6 +80,21 @@ const GRANULARITIES = [
 
 const AGGREGATIONS = ['sum', 'avg', 'max', 'min', 'stddev'];
 
+const SCALE_OPTIONS = {
+  INR: [
+    { label: 'Crore',    value: 'crore',    divisor: 1e7, suffix: 'Cr' },
+    { label: 'Lakh',     value: 'lakh',     divisor: 1e5, suffix: 'L'  },
+    { label: 'Thousand', value: 'thousand', divisor: 1e3, suffix: 'K'  },
+    { label: 'Raw',      value: 'raw',      divisor: 1,   suffix: ''   },
+  ],
+  USD: [
+    { label: 'Billion',  value: 'billion',  divisor: 1e9, suffix: 'B'  },
+    { label: 'Million',  value: 'million',  divisor: 1e6, suffix: 'M'  },
+    { label: 'Thousand', value: 'thousand', divisor: 1e3, suffix: 'K'  },
+    { label: 'Raw',      value: 'raw',      divisor: 1,   suffix: ''   },
+  ],
+};
+
 const CHART_COLORS = {
   line: { border: '#2557a7', bg: 'rgba(37,87,167,.08)' },
   area: { border: '#2557a7', bg: 'rgba(37,87,167,.18)' },
@@ -143,6 +158,8 @@ export default function DatasetDetailPage({ isActive }) {
   // results
   const [results,        setResults]        = useState([]);
   const [unit,           setUnit]           = useState('');
+  const [currency,       setCurrency]       = useState('');
+  const [displayScale,   setDisplayScale]   = useState('raw');
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError,   setAnalyticsError]   = useState(null);
 
@@ -161,6 +178,19 @@ export default function DatasetDetailPage({ isActive }) {
   const chartInstance    = useRef(null);
   const fetchIdRef       = useRef(0);
   const metricIdRef      = useRef(metricId);
+
+  // ── scale helpers (derived from currency + displayScale) ─────────────
+  const scaleOptions = useMemo(() => SCALE_OPTIONS[currency] || null, [currency]);
+  const currentScaleObj = useMemo(() => {
+    const opts = SCALE_OPTIONS[currency];
+    return opts?.find(s => s.value === displayScale) ?? { label: 'Raw', value: 'raw', divisor: 1, suffix: '' };
+  }, [currency, displayScale]);
+  const fmtVal = useCallback((v) => {
+    if (unit === 'amount' && currentScaleObj.divisor > 1) {
+      return (v / currentScaleObj.divisor).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + ' ' + currentScaleObj.suffix;
+    }
+    return fmt(v, unit);
+  }, [unit, currentScaleObj]);
 
   // ── register React handler ────────────────────────────────────────────
   useEffect(() => {
@@ -237,6 +267,7 @@ export default function DatasetDetailPage({ isActive }) {
       const firstDateAttrId = firstDate?.date_attribute_type_id ?? firstDate?.id ?? null;
       setMetricId(firstMetricId);
       setUnit(firstMetric?.unit || '');
+      setCurrency(firstMetric?.currency || '');
       setDateAttrId(firstDateAttrId);
       setDimTypeId(String(firstDimType?.dimension_type_id ?? firstDimType?.id ?? '') || null);
 
@@ -269,11 +300,21 @@ export default function DatasetDetailPage({ isActive }) {
   // ── keep metricIdRef in sync (used by probe to avoid circular deps) ──
   useEffect(() => { metricIdRef.current = metricId; }, [metricId]);
 
-  // ── update unit ───────────────────────────────────────────────────────
+  // ── update unit + currency when metric changes ────────────────────────
   useEffect(() => {
     const m = metrics.find(m => String(m.metric_id ?? m.id) === String(metricId));
-    if (m) setUnit(m.unit || '');
+    if (m) {
+      setUnit(m.unit || '');
+      setCurrency(m.currency || '');
+    }
   }, [metricId, metrics]);
+
+  // ── auto-reset display scale when currency changes ────────────────────
+  useEffect(() => {
+    if (currency === 'INR') setDisplayScale('crore');
+    else if (currency === 'USD') setDisplayScale('million');
+    else setDisplayScale('raw');
+  }, [currency]);
 
   // ── probe metric availability when a dimension is selected ────────────
   useEffect(() => {
@@ -375,7 +416,10 @@ export default function DatasetDetailPage({ isActive }) {
     if (chartInstance.current) { chartInstance.current.destroy(); chartInstance.current = null; }
 
     const labels = results.map(r => r.period || r.label || '');
-    const data   = results.map(r => Number(r.value ?? r.aggregate_value ?? r.metric_value ?? 0));
+    const data   = results.map(r => {
+      const raw = Number(r.value ?? r.aggregate_value ?? r.metric_value ?? 0);
+      return (unit === 'amount' && currentScaleObj.divisor > 1) ? raw / currentScaleObj.divisor : raw;
+    });
     const c      = CHART_COLORS[chartType] || CHART_COLORS.line;
     const dark   = document.documentElement.getAttribute('data-theme') === 'dark';
     const gc     = dark ? 'rgba(255,255,255,.05)' : 'rgba(26,28,24,.04)';
@@ -405,14 +449,26 @@ export default function DatasetDetailPage({ isActive }) {
           borderWidth: 1, titleColor: '#888', bodyColor: dark ? '#e8e8e8' : '#1a1c18',
           bodyFont: { family: "'JetBrains Mono',monospace", size: 11 },
           padding: 10, cornerRadius: 9,
-          callbacks: { label: ctx => ` ${fmt(ctx.parsed?.y ?? ctx.parsed, unit)} ${unit}` },
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed?.y ?? ctx.parsed;
+              if (unit === 'amount' && currentScaleObj.divisor > 1) {
+                return ` ${v.toLocaleString('en-IN', { maximumFractionDigits: 2 })} ${currentScaleObj.suffix}`;
+              }
+              return ` ${fmt(v, unit)} ${unit}`;
+            },
+          },
         },
       },
     };
     if (chartType !== 'pie') {
       opts.scales = {
         x: { grid: { color: gc, lineWidth: .5 }, ticks: { color: tc2, font: { size: 11 } }, border: { display: false } },
-        y: { grid: { color: gc, lineWidth: .5 }, ticks: { color: tc2, font: { family: "'JetBrains Mono',monospace", size: 10.5 }, callback: v => unit === '%' ? v + '%' : v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v }, border: { display: false } },
+        y: { grid: { color: gc, lineWidth: .5 }, ticks: { color: tc2, font: { family: "'JetBrains Mono',monospace", size: 10.5 }, callback: v => {
+          if (unit === '%') return v + '%';
+          if (unit === 'amount' && currentScaleObj.divisor > 1) return v.toLocaleString('en-IN', { maximumFractionDigits: 1 }) + (currentScaleObj.suffix ? ' ' + currentScaleObj.suffix : '');
+          return v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v;
+        }}, border: { display: false } },
       };
     }
     chartInstance.current = new Chart(chartRef.current, {
@@ -420,7 +476,7 @@ export default function DatasetDetailPage({ isActive }) {
       data: { labels, datasets: [dataset] },
       options: opts,
     });
-  }, [results, chartType, unit, metricId, metrics]);
+  }, [results, chartType, unit, metricId, metrics, currentScaleObj]);
 
   // ── derived ───────────────────────────────────────────────────────────
   const metricName = useMemo(() => {
@@ -458,11 +514,12 @@ export default function DatasetDetailPage({ isActive }) {
 
   const chartSubtitle = useMemo(() => {
     const parts = [`${aggregation.toUpperCase()}(${metricName})`];
+    if (unit === 'amount' && currentScaleObj.divisor > 1) parts.push(`in ${currentScaleObj.label}s`);
     if (dimTypeName) parts.push(`Type: ${dimTypeName}`);
     if (startDate && endDate) parts.push(`${fmtDate(startDate)} → ${fmtDate(endDate)}`);
     if (granularity) parts.push(`Periodicity: ${GRANULARITIES.find(g => g.value === granularity)?.label || granularity}`);
     return parts.join(' • ');
-  }, [aggregation, metricName, dimTypeName, startDate, endDate, granularity]);
+  }, [aggregation, metricName, unit, currentScaleObj, dimTypeName, startDate, endDate, granularity]);
 
   // active filter summary for the breadcrumb tag
   const filterSummary = useMemo(() => {
@@ -720,9 +777,9 @@ export default function DatasetDetailPage({ isActive }) {
               {/* KPI strip */}
               <div className="det-kpi-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
                 {[
-                  { label: 'TOTAL',  value: analyticsLoading ? '—' : fmt(kpis.total, unit), sub: metricName },
-                  { label: 'PEAK',   value: analyticsLoading ? '—' : fmt(kpis.peak,  unit), sub: `Highest ${kpis.peakPeriod}` },
-                  { label: 'AVG',    value: analyticsLoading ? '—' : fmt(kpis.avg,   unit), sub: `Per ${GRANULARITIES.find(g => g.value === granularity)?.label || granularity}` },
+                  { label: 'TOTAL',  value: analyticsLoading ? '—' : fmtVal(kpis.total), sub: metricName },
+                  { label: 'PEAK',   value: analyticsLoading ? '—' : fmtVal(kpis.peak),  sub: `Highest ${kpis.peakPeriod}` },
+                  { label: 'AVG',    value: analyticsLoading ? '—' : fmtVal(kpis.avg),   sub: `Per ${GRANULARITIES.find(g => g.value === granularity)?.label || granularity}` },
                   { label: 'POINTS', value: analyticsLoading ? '—' : String(kpis.points || 0), sub: `${GRANULARITIES.find(g => g.value === granularity)?.label || granularity} periods` },
                 ].map((k, i) => (
                   <div key={k.label} className="card" style={{ padding: '12px 16px' }}>
@@ -759,7 +816,7 @@ export default function DatasetDetailPage({ isActive }) {
                 </div>
                 {!analyticsLoading && results.length > 0 && (
                   <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--tx2)', fontFamily: 'var(--mo)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    Total: {fmt(kpis.total, unit)} {unit}
+                    Total: {fmtVal(kpis.total)}
                   </span>
                 )}
               </div>
@@ -801,7 +858,7 @@ export default function DatasetDetailPage({ isActive }) {
                   <thead><tr>
                     <th style={{ width: 32 }}>#</th>
                     <th>PERIOD</th>
-                    <th className="R">VALUE {unit ? `(${unit})` : ''}</th>
+                    <th className="R">VALUE {unit === 'amount' && currentScaleObj.suffix ? `(${currentScaleObj.suffix})` : unit ? `(${unit})` : ''}</th>
                     <th>METRIC</th>
                     <th>DATE ATTRIBUTE</th>
                     <th>DATASET</th>
@@ -830,7 +887,7 @@ export default function DatasetDetailPage({ isActive }) {
                         <tr key={i}>
                           <td className="hh">{rowNum}</td>
                           <td><strong>{row.period || row.period_label || '—'}</strong></td>
-                          <td className="nb R" style={{ color: 'var(--blue)', fontWeight: 600 }}>{fmt(val, unit)}</td>
+                          <td className="nb R" style={{ color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
                           <td className="mt">{row.metric_name || metricName || '—'}</td>
                           <td className="mt">{row.date_attribute_type_name || dateAttrName || '—'}</td>
                           <td className="mt">{row.dataset_name || datasetInfo?.title || '—'}</td>
@@ -939,6 +996,36 @@ export default function DatasetDetailPage({ isActive }) {
                   </>
                 )}
               </div>
+
+              {/* ── DISPLAY SCALE (only for amount metrics) ── */}
+              {unit === 'amount' && scaleOptions && (
+                <div className="ctrl-blk" style={{ marginBottom: 10 }}>
+                  <div className="ctrl-lbl">Display as</div>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {scaleOptions.map(s => (
+                      <button
+                        key={s.value}
+                        onClick={() => setDisplayScale(s.value)}
+                        style={{
+                          flex: 1, padding: '5px 6px', borderRadius: 6, border: '1px solid',
+                          borderColor: displayScale === s.value ? 'var(--blue)' : 'var(--bdr)',
+                          background: displayScale === s.value ? 'rgba(37,87,167,.14)' : 'var(--sf2)',
+                          color: displayScale === s.value ? '#5a9cf5' : 'var(--tx3)',
+                          fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                          transition: 'all .12s', fontFamily: 'var(--fn)',
+                        }}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                  {currency && (
+                    <div style={{ fontSize: 9.5, color: 'var(--tx4)', marginTop: 4 }}>
+                      Currency: <span style={{ color: 'var(--tx3)', fontFamily: 'var(--mo)' }}>{currency}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 4 }}>
                 <div className="ctrl-blk" style={{ flex: 1 }}>
