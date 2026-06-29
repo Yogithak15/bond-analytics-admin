@@ -205,7 +205,6 @@ function SkeletonRow(){
   const p={background:'linear-gradient(90deg,#F3F4F6 25%,#E9EAEC 50%,#F3F4F6 75%)',backgroundSize:'200% 100%',animation:'skel-shimmer 1.4s ease-in-out infinite',borderRadius:4};
   return(
     <tr>
-      <td style={{padding:'11px 12px',width:36}}><div style={{width:14,height:14,borderRadius:3,...p}}/></td>
       <td style={{padding:'11px 12px'}}><div style={{display:'flex',alignItems:'center',gap:8}}><div style={{width:30,height:30,borderRadius:7,...p}}/><div><div style={{height:11,width:140,...p,marginBottom:5}}/><div style={{height:9,width:90,...p}}/></div></div></td>
       <td style={{padding:'11px 12px'}}><div style={{height:20,width:44,borderRadius:20,...p}}/></td>
       <td style={{padding:'11px 12px'}}><div style={{height:20,width:54,borderRadius:20,...p}}/></td>
@@ -267,15 +266,12 @@ function PreviewDrawer({ds,onClose,favorites,toggleFav}){
   );
 }
 
-function TableRow({d,isSel,isFav,onSelect,onFav,onPreview}){
+function TableRow({d,isFav,onFav,onPreview}){
   const [hov,setHov]=useState(false);
   const ss=SRC_STYLE[d.src]||SRC_STYLE.other;
   const fs=FREQ_STYLE[d.freq]||FREQ_STYLE.weekly;
   return(
-    <tr onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{background:isSel?'#EFF6FF':hov?C.hoverRow:C.card,transition:'background .1s',borderBottom:`1px solid ${C.border}`}}>
-      <td style={{padding:'10px 12px',textAlign:'center',width:36}}>
-        <input type="checkbox" checked={isSel} onChange={()=>onSelect(d.sourceId)} style={{accentColor:C.blue,cursor:'pointer',width:13,height:13}}/>
-      </td>
+    <tr onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{background:hov?C.hoverRow:C.card,transition:'background .1s',borderBottom:`1px solid ${C.border}`}}>
       <td style={{padding:'10px 12px',maxWidth:220}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <div style={{width:30,height:30,borderRadius:7,background:C.blueLt,border:`1px solid ${C.blueMid}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
@@ -364,7 +360,6 @@ export default function CatalogPage({isActive}){
   const [sortCol,setSortCol]=useState('created');
   const [sortDir,setSortDir]=useState('desc');
   const [page,setPage]=useState(1);
-  const [selected,setSelected]=useState(new Set());
   const [favorites,setFavorites]=useState(()=>{try{return new Set(JSON.parse(localStorage.getItem('bb-fav')||'[]'));}catch{return new Set();}});
   const [preview,setPreview]=useState(null);
   const [filtersOpen,setFiltersOpen]=useState(false);
@@ -373,10 +368,6 @@ export default function CatalogPage({isActive}){
 
   const toggleFav=useCallback((id)=>{
     setFavorites(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);try{localStorage.setItem('bb-fav',JSON.stringify([...n]));}catch{}return n;});
-  },[]);
-
-  const toggleSelect=useCallback((id)=>{
-    setSelected(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);return n;});
   },[]);
 
   useEffect(()=>{
@@ -432,7 +423,7 @@ export default function CatalogPage({isActive}){
     if(statusFilter!=='all')ds=ds.filter(d=>d.status===statusFilter);
     if(freqFilter!=='all')ds=ds.filter(d=>d.freq===freqFilter);
     const q=search.toLowerCase().trim();
-    if(q)ds=ds.filter(d=>d.title.toLowerCase().includes(q)||d.id.toLowerCase().includes(q)||d.srcLabel.toLowerCase().includes(q)||d.desc.toLowerCase().includes(q));
+    if(q)ds=ds.filter(d=>d.title.toLowerCase().includes(q)||d.id.toLowerCase().includes(q)||d.srcLabel.toLowerCase().includes(q)||d.desc.toLowerCase().includes(q)||d.freq.toLowerCase().includes(q)||d.status.toLowerCase().includes(q));
     const m=sortDir==='asc'?1:-1;
     const sm={
       name:(a,b)=>m*a.title.localeCompare(b.title),
@@ -453,7 +444,6 @@ export default function CatalogPage({isActive}){
   const totalPages=Math.ceil(filtered.length/PAGE_SIZE);
   const paginated=filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
   const hasFilters=search||srcFilter!=='all'||statusFilter!=='all'||freqFilter!=='all';
-  const allSel=paginated.length>0&&paginated.every(d=>selected.has(d.sourceId));
 
   const resetFilters=()=>{setSearch('');setSrcFilter('all');setStatusFilter('all');setFreqFilter('all');};
 
@@ -491,7 +481,7 @@ export default function CatalogPage({isActive}){
 
   return(
     <div className={`page${isActive?' on':''}`} id="page-catalog" style={{background:C.bg,color:C.text,fontFamily:'Inter,-apple-system,BlinkMacSystemFont,sans-serif',overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
-      <div style={{maxWidth:1280,margin:'0 auto',padding:`${py}px ${px}px 36px`}}>
+      <div style={{padding:`${py}px ${px}px 36px`}}>
 
         {/* Header */}
         <div style={{display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',marginBottom:isMobile?14:18,gap:10,flexWrap:'wrap'}}>
@@ -505,7 +495,7 @@ export default function CatalogPage({isActive}){
         {/* Stats Cards */}
         <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':isTablet?'1fr 1fr':'repeat(4,1fr)',gap:isMobile?8:12,marginBottom:isMobile?14:18}}>
           <StatCard icon={<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></>} title="Total Datasets" value={loading?0:summary.total} desc="All sources" accent="blue" loading={loading} enriching={false} isMobile={isMobile}/>
-          <StatCard icon={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} title="Active" value={loading?0:summary.active} desc="Healthy & syncing" accent="green" loading={loading} enriching={false} isMobile={isMobile}/>
+          <StatCard icon={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} title="Active" value={loading?0:summary.active} desc="Datasets" accent="green" loading={loading} enriching={false} isMobile={isMobile}/>
           <StatCard icon={<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>} title="Total Metrics" value={loading?0:summary.metrics} desc="Across datasets" accent="purple" loading={loading} enriching={enriching} isMobile={isMobile}/>
           <StatCard icon={<><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></>} title="Dimensions" value={loading?0:summary.dims} desc="Unique values" accent="orange" loading={loading} enriching={enriching} isMobile={isMobile}/>
         </div>
@@ -528,10 +518,10 @@ export default function CatalogPage({isActive}){
           {/* filters — on mobile collapse into a button */}
           {isMobile?(
             <>
-              {/* <button onClick={()=>setFiltersOpen(o=>!o)} style={{height:36,padding:'0 12px',borderRadius:9,border:`1.5px solid ${filtersOpen||hasFilters?C.blue:C.border}`,background:filtersOpen||hasFilters?C.blueLt:C.card,color:filtersOpen||hasFilters?C.blue:C.textSec,fontSize:12.5,fontWeight:500,cursor:'pointer',display:'flex',alignItems:'center',gap:5,boxShadow:C.shadowSm}}>
+              <button onClick={()=>setFiltersOpen(o=>!o)} style={{height:36,padding:'0 12px',borderRadius:9,border:`1.5px solid ${filtersOpen||hasFilters?C.blue:C.border}`,background:filtersOpen||hasFilters?C.blueLt:C.card,color:filtersOpen||hasFilters?C.blue:C.textSec,fontSize:12.5,fontWeight:500,cursor:'pointer',display:'flex',alignItems:'center',gap:5,boxShadow:C.shadowSm}}>
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                 Filters{hasFilters?' ·':''}{(srcFilter!=='all'?1:0)+(freqFilter!=='all'?1:0)+(statusFilter!=='all'?1:0)>0?` ${(srcFilter!=='all'?1:0)+(freqFilter!=='all'?1:0)+(statusFilter!=='all'?1:0)}`:''}
-              </button> */}
+              </button>
               {filtersOpen&&(
                 <div style={{width:'100%',display:'flex',gap:8,flexWrap:'wrap'}}>
                   <select value={srcFilter} onChange={e=>setSrcFilter(e.target.value)} style={{...selStyle,flex:1,minWidth:110}}>
@@ -576,15 +566,6 @@ export default function CatalogPage({isActive}){
           )}
         </div>
 
-        {/* Bulk bar */}
-        {selected.size>0&&(
-          <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',marginBottom:10,background:C.blueLt,border:`1px solid ${C.blueMid}`,borderRadius:9,flexWrap:'wrap'}}>
-            <span style={{fontSize:12.5,fontWeight:600,color:C.blue}}>{selected.size} selected</span>
-            <button onClick={()=>exportCSV(datasets.filter(d=>selected.has(d.sourceId)))} style={{height:28,padding:'0 10px',borderRadius:7,border:`1px solid ${C.blueMid}`,background:C.card,color:C.blue,fontSize:12,fontWeight:500,cursor:'pointer'}}>Export CSV</button>
-            <button onClick={()=>setSelected(new Set())} style={{marginLeft:'auto',height:28,padding:'0 10px',borderRadius:7,border:`1px solid ${C.blueMid}`,background:'none',color:C.blue,fontSize:12,cursor:'pointer'}}>Deselect All</button>
-          </div>
-        )}
-
         {/* Table card */}
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,boxShadow:C.shadowMd,overflow:'hidden'}}>
 
@@ -606,9 +587,6 @@ export default function CatalogPage({isActive}){
             <table style={{width:'100%',borderCollapse:'collapse',minWidth:isMobile?360:860}}>
               <thead>
                 <tr style={{background:C.hdr}}>
-                  <th style={{width:36,padding:'9px 12px',borderBottom:`1px solid ${C.border}`}}>
-                    <input type="checkbox" checked={allSel} onChange={()=>{if(allSel)setSelected(prev=>{const n=new Set(prev);paginated.forEach(d=>n.delete(d.sourceId));return n;});else setSelected(prev=>{const n=new Set(prev);paginated.forEach(d=>n.add(d.sourceId));return n;});}} style={{accentColor:C.blue,cursor:'pointer',width:13,height:13}}/>
-                  </th>
                   {visibleCols.map(col=>(
                     <th key={col.key} onClick={col.noSort?undefined:()=>handleSort(col.key)} style={{padding:'9px 12px',textAlign:'left',fontSize:10.5,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:sortCol===col.key?C.blue:C.textMut,borderBottom:`1px solid ${C.border}`,cursor:col.noSort?'default':'pointer',whiteSpace:'nowrap',userSelect:'none',transition:'color .13s',width:col.w||'auto'}}>
                       <div style={{display:'flex',alignItems:'center',gap:4}}>
@@ -623,13 +601,13 @@ export default function CatalogPage({isActive}){
                 {loading
                   ?[...Array(isMobile?5:8)].map((_,i)=><SkeletonRow key={i}/>)
                   :error
-                  ?<tr><td colSpan={visibleCols.length+1} style={{padding:'40px 16px',textAlign:'center'}}>
+                  ?<tr><td colSpan={visibleCols.length} style={{padding:'40px 16px',textAlign:'center'}}>
                     <div style={{fontSize:13,fontWeight:600,color:C.danger,marginBottom:6}}>Failed to load</div>
                     <div style={{fontSize:11.5,color:C.textMut,marginBottom:12}}>{error}</div>
                     <button onClick={loadData} style={{padding:'6px 14px',borderRadius:8,background:C.blue,color:'#fff',border:'none',fontSize:12,fontWeight:600,cursor:'pointer'}}>Retry</button>
                   </td></tr>
                   :filtered.length===0
-                  ?<tr><td colSpan={visibleCols.length+1}>
+                  ?<tr><td colSpan={visibleCols.length}>
                     <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'48px 16px',gap:10}}>
                       <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke={C.borderStr} strokeWidth="1.2" strokeLinecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
                       <div style={{fontSize:14,fontWeight:700,color:C.textSec}}>No datasets found</div>
@@ -640,9 +618,7 @@ export default function CatalogPage({isActive}){
                   :paginated.map(d=>(
                     <TableRow
                       key={d.id} d={d}
-                      isSel={selected.has(d.sourceId)}
                       isFav={favorites.has(d.sourceId)}
-                      onSelect={toggleSelect}
                       onFav={toggleFav}
                       onPreview={setPreview}
                     />
