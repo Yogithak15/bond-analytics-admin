@@ -360,9 +360,9 @@ function TableRow({d,isFav,onFav,onPreview,isDark}){
       <td style={{padding:'10px 12px'}}><StatusPill status={d.status} isDark={isDark}/></td>
       <td style={{padding:'10px 28px 10px 12px'}}>
         <div style={{display:'flex',gap:4}}>
-          <ActionBtn title="Full Analysis" onClick={()=>window.openDetail?.(d.sourceId)}>
+          {/* <ActionBtn title="Full Analysis" onClick={()=>window.openDetail?.(d.sourceId)}>
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-          </ActionBtn>
+          </ActionBtn> */}
           <ActionBtn title="Quick Preview" onClick={()=>onPreview(d)}>
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
           </ActionBtn>
