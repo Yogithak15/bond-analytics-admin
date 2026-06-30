@@ -326,7 +326,7 @@ function TableRow({d,isFav,onFav,onPreview,isDark}){
   const fs=FREQ[d.freq]||FREQ.weekly;
   return(
     <tr onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{background:hov?C.hoverRow:C.card,transition:'background .1s',borderBottom:`1px solid ${C.border}`}}>
-      <td style={{padding:'10px 12px 10px 80px',width:300,maxWidth:300}}>
+      <td style={{padding:'10px 12px 10px 28px',width:300,maxWidth:300}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <div style={{minWidth:0,overflow:'hidden'}}>
             <div onClick={()=>onPreview(d)} title={d.title} style={{fontSize:13,fontWeight:600,color:hov?C.blue:C.text,cursor:'pointer',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',transition:'color .12s'}}>
@@ -712,7 +712,7 @@ export default function CatalogPage({isActive}){
                 <thead>
                   <tr style={{background:C.hdr}}>
                     {visibleCols.map(col=>(
-                      <th key={col.key} onClick={col.noSort?undefined:()=>handleSort(col.key)} style={{padding:col.key==='name'?'9px 12px 9px 80px':col.key==='actions'?'9px 28px 9px 12px':'9px 12px',textAlign:'left',fontSize:10.5,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:sortCol===col.key?C.blue:C.textMut,borderBottom:`1px solid ${C.border}`,cursor:col.noSort?'default':'pointer',whiteSpace:'nowrap',userSelect:'none',transition:'color .13s',width:col.w||'auto'}}>
+                      <th key={col.key} onClick={col.noSort?undefined:()=>handleSort(col.key)} style={{padding:col.key==='name'?'9px 12px 9px 28px':col.key==='actions'?'9px 28px 9px 12px':'9px 12px',textAlign:'left',fontSize:10.5,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:sortCol===col.key?C.blue:C.textMut,borderBottom:`1px solid ${C.border}`,cursor:col.noSort?'default':'pointer',whiteSpace:'nowrap',userSelect:'none',transition:'color .13s',width:col.w||'auto'}}>
                         <div style={{display:'flex',alignItems:'center',gap:4}}>
                           {col.label}
                           {!col.noSort&&<SortIcon active={sortCol===col.key} dir={sortDir}/>}
