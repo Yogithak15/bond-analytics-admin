@@ -326,7 +326,7 @@ function TableRow({d,isFav,onFav,onPreview,isDark}){
   const fs=FREQ[d.freq]||FREQ.weekly;
   return(
     <tr onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{background:hov?C.hoverRow:C.card,transition:'background .1s',borderBottom:`1px solid ${C.border}`}}>
-      <td style={{padding:'10px 12px',width:300,maxWidth:300}}>
+      <td style={{padding:'10px 12px 10px 80px',width:300,maxWidth:300}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <div style={{minWidth:0,overflow:'hidden'}}>
             <div onClick={()=>onPreview(d)} title={d.title} style={{fontSize:13,fontWeight:600,color:hov?C.blue:C.text,cursor:'pointer',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',transition:'color .12s'}}>
@@ -358,7 +358,7 @@ function TableRow({d,isFav,onFav,onPreview,isDark}){
         {d.updated&&<div style={{fontSize:10.5,color:C.textFaint,marginTop:1}}>{relativeTime(d.updated)}</div>}
       </td>
       <td style={{padding:'10px 12px'}}><StatusPill status={d.status} isDark={isDark}/></td>
-      <td style={{padding:'10px 12px'}}>
+      <td style={{padding:'10px 28px 10px 12px'}}>
         <div style={{display:'flex',gap:4}}>
           <ActionBtn title="Full Analysis" onClick={()=>window.openDetail?.(d.sourceId)}>
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
@@ -366,9 +366,6 @@ function TableRow({d,isFav,onFav,onPreview,isDark}){
           <ActionBtn title="Quick Preview" onClick={()=>onPreview(d)}>
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
           </ActionBtn>
-          {/* <ActionBtn title={isFav?'Unstar':'Star'} onClick={()=>onFav(d.sourceId)}>
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill={isFav?'#F59E0B':'none'} stroke={isFav?'#F59E0B':'currentColor'}/>
-          </ActionBtn> */}
           <ActionBtn title="Source files" onClick={()=>openSourceUrlsModal(d.sourceId,d.title)}>
             <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
           </ActionBtn>
@@ -715,7 +712,7 @@ export default function CatalogPage({isActive}){
                 <thead>
                   <tr style={{background:C.hdr}}>
                     {visibleCols.map(col=>(
-                      <th key={col.key} onClick={col.noSort?undefined:()=>handleSort(col.key)} style={{padding:'9px 12px',textAlign:'left',fontSize:10.5,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:sortCol===col.key?C.blue:C.textMut,borderBottom:`1px solid ${C.border}`,cursor:col.noSort?'default':'pointer',whiteSpace:'nowrap',userSelect:'none',transition:'color .13s',width:col.w||'auto'}}>
+                      <th key={col.key} onClick={col.noSort?undefined:()=>handleSort(col.key)} style={{padding:col.key==='name'?'9px 12px 9px 80px':col.key==='actions'?'9px 28px 9px 12px':'9px 12px',textAlign:'left',fontSize:10.5,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:sortCol===col.key?C.blue:C.textMut,borderBottom:`1px solid ${C.border}`,cursor:col.noSort?'default':'pointer',whiteSpace:'nowrap',userSelect:'none',transition:'color .13s',width:col.w||'auto'}}>
                         <div style={{display:'flex',alignItems:'center',gap:4}}>
                           {col.label}
                           {!col.noSort&&<SortIcon active={sortCol===col.key} dir={sortDir}/>}
