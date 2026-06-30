@@ -193,20 +193,50 @@ export default function DatasetDetailPage({ isActive }) {
 
   // ── scale helpers (derived from currency + displayScale) ─────────────
   const scaleOptions = useMemo(() => SCALE_OPTIONS[currency] || null, [currency]);
+
   const currentScaleObj = useMemo(() => {
+    if (displayScale === 'auto') return { label: 'Auto', value: 'auto', divisor: null, suffix: '' };
     const opts = SCALE_OPTIONS[currency];
     return opts?.find(s => s.value === displayScale) ?? { label: 'Raw', value: 'raw', divisor: 1, suffix: '' };
   }, [currency, displayScale]);
-  const fmtVal = useCallback((v) => {
-    if (unit === 'amount') {
-      if (currentScaleObj.divisor > 1) {
-        return (v / currentScaleObj.divisor).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + ' ' + currentScaleObj.suffix;
+
+  // Returns { num: string, unit: string } — num is the numeric part, unit is the suffix badge
+  const fmtValParts = useCallback((v) => {
+    if (unit !== 'amount') return { num: fmt(v, unit), unit: '' };
+    const n2 = (x) => Number(x).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    const abs = Math.abs(v);
+    if (displayScale === 'auto' || currentScaleObj.divisor == null) {
+      if (currency === 'INR') {
+        if (abs >= 1e14) return { num: n2(v / 1e14), unit: 'Cr Cr' };
+        if (abs >= 1e12) return { num: n2(v / 1e12), unit: 'L Cr'  };
+        if (abs >= 1e10) return { num: n2(v / 1e10), unit: 'K Cr'  };
+        if (abs >= 1e7)  return { num: n2(v / 1e7),  unit: 'Cr'    };
+        if (abs >= 1e5)  return { num: n2(v / 1e5),  unit: 'L'     };
+        if (abs >= 1e3)  return { num: n2(v / 1e3),  unit: 'K'     };
+        return { num: n2(v), unit: '' };
       }
-      // Raw — show actual number, no M/K abbreviation
-      return Number(v).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+      if (abs >= 1e12) return { num: n2(v / 1e12), unit: 'T' };
+      if (abs >= 1e9)  return { num: n2(v / 1e9),  unit: 'B' };
+      if (abs >= 1e6)  return { num: n2(v / 1e6),  unit: 'M' };
+      if (abs >= 1e3)  return { num: n2(v / 1e3),  unit: 'K' };
+      return { num: n2(v), unit: '' };
     }
-    return fmt(v, unit);
-  }, [unit, currentScaleObj]);
+    if (currentScaleObj.divisor > 1) {
+      return { num: n2(v / currentScaleObj.divisor), unit: currentScaleObj.suffix };
+    }
+    return { num: n2(v), unit: '' };
+  }, [unit, displayScale, currency, currentScaleObj]);
+
+  const fmtVal = useCallback((v) => {
+    const { num, unit: u } = fmtValParts(v);
+    return u ? `${num} ${u}` : num;
+  }, [fmtValParts]);
+
+  // Full unabbreviated value — used in tooltips
+  const fmtValFull = useCallback((v) => {
+    if (unit === 'amount') return Number(v).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    return String(v);
+  }, [unit]);
 
   // ── register React handler ────────────────────────────────────────────
   useEffect(() => {
@@ -328,8 +358,7 @@ export default function DatasetDetailPage({ isActive }) {
 
   // ── auto-reset display scale when currency changes ────────────────────
   useEffect(() => {
-    if (currency === 'INR') setDisplayScale('crore');
-    else if (currency === 'USD') setDisplayScale('million');
+    if (currency === 'INR' || currency === 'USD') setDisplayScale('auto');
     else setDisplayScale('raw');
   }, [currency]);
 
@@ -460,6 +489,42 @@ export default function DatasetDetailPage({ isActive }) {
     return { total, peak, avg: total / values.length, peakPeriod, points };
   }, [results, isMultiSeries]);
 
+  // ── chart unit: single consistent divisor+label for chart display ──────
+  const chartUnit = useMemo(() => {
+    if (unit !== 'amount') return { divisor: 1, label: '', suffix: '' };
+    const allVals = isMultiSeries
+      ? results.flatMap(s => s.data.map(d => Math.abs(Number(d.value ?? 0))))
+      : results.map(r => Math.abs(Number(r.value ?? r.aggregate_value ?? r.metric_value ?? 0)));
+    const maxVal = allVals.length ? Math.max(...allVals) : 0;
+    if (!maxVal) return { divisor: 1, label: '', suffix: '' };
+
+    const pickINR = (m) => {
+      if (m >= 1e14) return { divisor: 1e14, label: 'Cr Cr',    suffix: 'Cr Cr' };
+      if (m >= 1e12) return { divisor: 1e12, label: 'L Cr',     suffix: 'L Cr'  };
+      if (m >= 1e10) return { divisor: 1e10, label: 'K Cr',     suffix: 'K Cr'  };
+      if (m >= 1e7)  return { divisor: 1e7,  label: 'Crore',    suffix: 'Cr'    };
+      if (m >= 1e5)  return { divisor: 1e5,  label: 'Lakh',     suffix: 'L'     };
+      if (m >= 1e3)  return { divisor: 1e3,  label: 'Thousand', suffix: 'K'     };
+      return { divisor: 1, label: 'Raw', suffix: '' };
+    };
+    const pickOther = (m) => {
+      if (m >= 1e12) return { divisor: 1e12, label: 'Trillion', suffix: 'T' };
+      if (m >= 1e9)  return { divisor: 1e9,  label: 'Billion',  suffix: 'B' };
+      if (m >= 1e6)  return { divisor: 1e6,  label: 'Million',  suffix: 'M' };
+      if (m >= 1e3)  return { divisor: 1e3,  label: 'Thousand', suffix: 'K' };
+      return { divisor: 1, label: 'Raw', suffix: '' };
+    };
+
+    if (displayScale === 'auto') {
+      return currency === 'INR' ? pickINR(maxVal) : pickOther(maxVal);
+    }
+
+    // Manual selection: use the chosen unit as-is, no overflow adjustment
+    const d = currentScaleObj.divisor;
+    if (!d || d <= 1) return { divisor: 1, label: 'Raw', suffix: '' };
+    return { divisor: d, label: currentScaleObj.label, suffix: currentScaleObj.suffix };
+  }, [unit, displayScale, currency, currentScaleObj, results, isMultiSeries]);
+
   // ── chart ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const Chart = window['Chart'];
@@ -484,7 +549,7 @@ export default function DatasetDetailPage({ isActive }) {
         const map = Object.fromEntries(series.data.map(d => [d.period, Number(d.value ?? 0)]));
         const data = allPeriods.map(p => {
           const raw = map[p] ?? null;
-          return raw !== null && unit === 'amount' && currentScaleObj.divisor > 1 ? raw / currentScaleObj.divisor : raw;
+          return raw !== null && unit === 'amount' && chartUnit.divisor > 1 ? raw / chartUnit.divisor : raw;
         });
         const mc = MULTI_SERIES_COLORS[idx % MULTI_SERIES_COLORS.length];
         return {
@@ -506,7 +571,7 @@ export default function DatasetDetailPage({ isActive }) {
       labels = results.map(r => r.period || r.label || '');
       const data = results.map(r => {
         const raw = Number(r.value ?? r.aggregate_value ?? r.metric_value ?? 0);
-        return (unit === 'amount' && currentScaleObj.divisor > 1) ? raw / currentScaleObj.divisor : raw;
+        return (unit === 'amount' && chartUnit.divisor > 1) ? raw / chartUnit.divisor : raw;
       });
       const c = CHART_COLORS[chartType] || CHART_COLORS.line;
       chartKind = chartType === 'area' ? 'line' : chartType;
@@ -547,8 +612,8 @@ export default function DatasetDetailPage({ isActive }) {
               const v = ctx.parsed?.y ?? ctx.parsed;
               if (v === null || v === undefined) return null;
               let valStr;
-              if (unit === 'amount' && currentScaleObj.divisor > 1) {
-                valStr = `${v.toLocaleString('en-IN', { maximumFractionDigits: 2 })} ${currentScaleObj.suffix}`;
+              if (unit === 'amount' && chartUnit.divisor > 1) {
+                valStr = `${v.toLocaleString('en-IN', { maximumFractionDigits: 2 })} ${chartUnit.suffix}`;
               } else {
                 valStr = `${fmt(v, unit)}${unit ? ' ' + unit : ''}`;
               }
@@ -565,13 +630,13 @@ export default function DatasetDetailPage({ isActive }) {
         x: { grid: { color: gc, lineWidth: .5 }, ticks: { color: tc2, font: { size: 11 } }, border: { display: false } },
         y: { grid: { color: gc, lineWidth: .5 }, ticks: { color: tc2, font: { family: "'JetBrains Mono',monospace", size: 10.5 }, callback: v => {
           if (unit === '%') return v + '%';
-          if (unit === 'amount' && currentScaleObj.divisor > 1) return v.toLocaleString('en-IN', { maximumFractionDigits: 1 }) + (currentScaleObj.suffix ? ' ' + currentScaleObj.suffix : '');
+          if (unit === 'amount' && chartUnit.divisor > 1) return v.toLocaleString('en-IN', { maximumFractionDigits: 1 }) + (chartUnit.suffix ? ' ' + chartUnit.suffix : '');
           return v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v;
         }}, border: { display: false } },
       };
     }
     chartInstance.current = new Chart(chartRef.current, { type: chartKind, data: { labels, datasets }, options: opts });
-  }, [results, chartType, unit, metricId, metrics, currentScaleObj]);
+  }, [results, chartType, unit, metricId, metrics, chartUnit]);
 
   // ── derived ───────────────────────────────────────────────────────────
   const metricName = useMemo(() => {
@@ -610,12 +675,12 @@ export default function DatasetDetailPage({ isActive }) {
 
   const chartSubtitle = useMemo(() => {
     const parts = [`${aggregation.toUpperCase()}(${metricName})`];
-    if (unit === 'amount' && currentScaleObj.divisor > 1) parts.push(`in ${currentScaleObj.label}s`);
+    if (unit === 'amount' && chartUnit.suffix) parts.push(`Unit: ${chartUnit.label}`);
     if (dimTypeName) parts.push(`Type: ${dimTypeName}`);
     if (startDate && endDate) parts.push(`${fmtDate(startDate)} → ${fmtDate(endDate)}`);
     if (granularity) parts.push(`Periodicity: ${GRANULARITIES.find(g => g.value === granularity)?.label || granularity}`);
     return parts.join(' • ');
-  }, [aggregation, metricName, unit, currentScaleObj, dimTypeName, startDate, endDate, granularity]);
+  }, [aggregation, metricName, unit, chartUnit, dimTypeName, startDate, endDate, granularity]);
 
   // active filter summary for the breadcrumb tag
   const filterSummary = useMemo(() => {
@@ -873,17 +938,44 @@ export default function DatasetDetailPage({ isActive }) {
               {/* KPI strip */}
               <div className="det-kpi-strip" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
                 {[
-                  { label: 'TOTAL',  value: analyticsLoading ? '—' : fmtVal(kpis.total), sub: metricName },
-                  { label: 'PEAK',   value: analyticsLoading ? '—' : fmtVal(kpis.peak),  sub: `Highest ${kpis.peakPeriod}` },
-                  { label: 'AVG',    value: analyticsLoading ? '—' : fmtVal(kpis.avg),   sub: `Per ${GRANULARITIES.find(g => g.value === granularity)?.label || granularity}` },
-                  { label: 'POINTS', value: analyticsLoading ? '—' : String(kpis.points || 0), sub: `${GRANULARITIES.find(g => g.value === granularity)?.label || granularity} periods` },
-                ].map((k, i) => (
-                  <div key={k.label} className="card" style={{ padding: '12px 16px' }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--tx3)', marginBottom: 5 }}>{k.label}</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--mo)', color: 'var(--tx)', lineHeight: 1.1 }}>{k.value}</div>
-                    <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 4 }}>{k.sub}</div>
-                  </div>
-                ))}
+                  { label: 'TOTAL',  rawVal: kpis.total, sub: metricName },
+                  { label: 'PEAK',   rawVal: kpis.peak,  sub: `Highest ${kpis.peakPeriod}` },
+                  { label: 'AVG',    rawVal: kpis.avg,   sub: `Per ${GRANULARITIES.find(g => g.value === granularity)?.label || granularity}` },
+                  { label: 'POINTS', rawVal: kpis.points, sub: `${GRANULARITIES.find(g => g.value === granularity)?.label || granularity} periods`, isCount: true },
+                ].map((k) => {
+                  if (analyticsLoading) return (
+                    <div key={k.label} className="card" style={{ padding: '12px 16px' }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--tx3)', marginBottom: 5 }}>{k.label}</div>
+                      <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--mo)', color: 'var(--tx)', lineHeight: 1.1 }}>—</div>
+                      <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 4 }}>{k.sub}</div>
+                    </div>
+                  );
+                  if (k.isCount) return (
+                    <div key={k.label} className="card" style={{ padding: '12px 16px' }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--tx3)', marginBottom: 5 }}>{k.label}</div>
+                      <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--mo)', color: 'var(--tx)', lineHeight: 1.1 }}>{String(k.rawVal || 0)}</div>
+                      <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 4 }}>{k.sub}</div>
+                    </div>
+                  );
+                  // Always use chartUnit so KPI cards stay in sync with the chart scale
+                  const kpiN2 = (x) => Number(x).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+                  const parts = unit === 'amount' && chartUnit.divisor > 1
+                    ? { num: kpiN2(k.rawVal / chartUnit.divisor), unit: chartUnit.suffix }
+                    : unit === 'amount'
+                      ? { num: kpiN2(k.rawVal), unit: '' }
+                      : { num: fmtVal(k.rawVal), unit: '' };
+                  const fullVal = unit === 'amount' ? fmtValFull(k.rawVal) : null;
+                  return (
+                    <div key={k.label} className="card" style={{ padding: '12px 16px' }} title={fullVal || undefined}>
+                      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--tx3)', marginBottom: 5 }}>{k.label}</div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--mo)', color: 'var(--tx)', lineHeight: 1.1 }}>{parts.num}</div>
+                        {parts.unit && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--tx3)', fontFamily: 'var(--mo)' }}>{parts.unit}</span>}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 4 }}>{k.sub}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -911,9 +1003,16 @@ export default function DatasetDetailPage({ isActive }) {
                   <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 700 }}>{chartSubtitle}</div>
                 </div>
                 {!analyticsLoading && results.length > 0 && (
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--tx2)', fontFamily: 'var(--mo)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    Total: {fmtVal(kpis.total)}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {unit === 'amount' && chartUnit.suffix && (
+                      <span style={{ fontSize: 10, color: 'var(--tx3)', fontFamily: 'var(--mo)', border: '1px solid var(--bdr)', borderRadius: 5, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                        Unit: {chartUnit.label}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--tx2)', fontFamily: 'var(--mo)', whiteSpace: 'nowrap' }}>
+                      Total: {fmtVal(kpis.total)}
+                    </span>
+                  </div>
                 )}
               </div>
               <div style={{ padding: '14px 16px 10px', minHeight: 280, position: 'relative' }}>
@@ -963,7 +1062,7 @@ export default function DatasetDetailPage({ isActive }) {
                     <th style={{ textAlign: 'center' }}>#</th>
                     <th style={{ textAlign: 'center' }}>PERIOD</th>
                     {isMultiSeries && <th style={{ textAlign: 'center' }}>DIMENSION</th>}
-                    <th style={{ textAlign: 'center' }}>VALUE {unit === 'amount' && currentScaleObj.suffix ? `(${currentScaleObj.suffix})` : unit ? `(${unit})` : ''}</th>
+                    <th style={{ textAlign: 'center' }}>VALUE {unit === 'amount' && chartUnit.suffix ? `(${chartUnit.suffix})` : unit ? `(${unit})` : ''}</th>
                     <th style={{ textAlign: 'center' }}>METRIC</th>
                     {!isMultiSeries && <th style={{ textAlign: 'center' }}>DATE ATTRIBUTE</th>}
                   </tr></thead>
@@ -1000,7 +1099,7 @@ export default function DatasetDetailPage({ isActive }) {
                                   <span style={{ fontSize:11.5 }}>{row.dimension_name}</span>
                                 </span>
                               </td>
-                              <td style={{ textAlign: 'center', color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
+                              <td style={{ textAlign: 'center', color: 'var(--blue)', fontWeight: 600 }} title={unit === 'amount' ? fmtValFull(val) : undefined}>{fmtVal(val)}</td>
                               <td style={{ textAlign: 'center' }} className="mt">{row.metric_name || metricName || '—'}</td>
                             </tr>
                           );
@@ -1012,7 +1111,7 @@ export default function DatasetDetailPage({ isActive }) {
                             <tr key={i}>
                               <td style={{ textAlign: 'center' }} className="hh">{rowNum}</td>
                               <td style={{ textAlign: 'center' }}><strong>{row.period || row.period_label || '—'}</strong></td>
-                              <td style={{ textAlign: 'center', color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
+                              <td style={{ textAlign: 'center', color: 'var(--blue)', fontWeight: 600 }} title={unit === 'amount' ? fmtValFull(val) : undefined}>{fmtVal(val)}</td>
                               <td style={{ textAlign: 'center' }} className="mt">{row.metric_name || metricName || '—'}</td>
                               <td style={{ textAlign: 'center' }} className="mt">{row.date_attribute_type_name || dateAttrName || '—'}</td>
                             </tr>
@@ -1127,11 +1226,26 @@ export default function DatasetDetailPage({ isActive }) {
                 )}
               </div>
 
-              {/* ── DISPLAY SCALE (only for amount metrics) ── */}
+              {/* ── DISPLAY UNITS (only for amount metrics) ── */}
               {unit === 'amount' && scaleOptions && (
                 <div className="ctrl-blk" style={{ marginBottom: 10 }}>
-                  <div className="ctrl-lbl">Display as</div>
+                  <div className="ctrl-lbl">Display Units</div>
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {/* Auto button */}
+                    <button
+                      onClick={() => setDisplayScale('auto')}
+                      title="Automatically pick the most readable unit"
+                      style={{
+                        flex: 1, padding: '5px 6px', borderRadius: 6, border: '1px solid',
+                        borderColor: displayScale === 'auto' ? 'var(--blue)' : 'var(--bdr)',
+                        background: displayScale === 'auto' ? 'rgba(37,87,167,.14)' : 'var(--sf2)',
+                        color: displayScale === 'auto' ? '#5a9cf5' : 'var(--tx3)',
+                        fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                        transition: 'all .12s', fontFamily: 'var(--fn)',
+                      }}
+                    >
+                      {displayScale === 'auto' && chartUnit.suffix ? `Auto (${chartUnit.suffix})` : 'Auto'}
+                    </button>
                     {scaleOptions.map(s => (
                       <button
                         key={s.value}
@@ -1152,6 +1266,7 @@ export default function DatasetDetailPage({ isActive }) {
                   {currency && (
                     <div style={{ fontSize: 9.5, color: 'var(--tx4)', marginTop: 4 }}>
                       Currency: <span style={{ color: 'var(--tx3)', fontFamily: 'var(--mo)' }}>{currency}</span>
+                      {chartUnit.suffix && <span style={{ color: 'var(--blue)', marginLeft: 6 }}>→ {chartUnit.label}</span>}
                     </div>
                   )}
                 </div>
@@ -1286,6 +1401,16 @@ export default function DatasetDetailPage({ isActive }) {
 
             </div>
 
+            {/* Drawer footer */}
+            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--bdr)', flexShrink: 0 }}>
+              <button
+                className="btn"
+                style={{ width: '100%', justifyContent: 'center', background: 'var(--blue)', color: '#fff', fontWeight: 600, fontSize: 12, padding: '8px 0' }}
+                onClick={() => { userInteracted.current = true; setHasApplied(true); fetchAnalytics(); }}
+              >
+                Apply
+              </button>
+            </div>
 
           </div>{/* /drawer */}
       </div>
