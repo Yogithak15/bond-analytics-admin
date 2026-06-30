@@ -189,6 +189,7 @@ export default function DatasetDetailPage({ isActive }) {
   const chartInstance    = useRef(null);
   const fetchIdRef       = useRef(0);
   const metricIdRef      = useRef(metricId);
+  const userInteracted   = useRef(false);
 
   // ── scale helpers (derived from currency + displayScale) ─────────────
   const scaleOptions = useMemo(() => SCALE_OPTIONS[currency] || null, [currency]);
@@ -225,6 +226,7 @@ export default function DatasetDetailPage({ isActive }) {
 
     const cached = window.DATASETS?.find(d => String(d.sourceId) === String(sourceId));
     setDatasetInfo(cached || null);
+    userInteracted.current = false;
 
     setMetrics([]);
     setDateAttrTypes([]);
@@ -405,7 +407,14 @@ export default function DatasetDetailPage({ isActive }) {
     }
   }, [sourceId, metricId, aggregation, granularity, dateAttrId, dimTypeId, selectedDims, startDate, endDate]);
 
-  // analytics only run when user explicitly clicks Apply
+  // ── auto-fetch only after user has interacted with a control ─────────
+  useEffect(() => {
+    if (!userInteracted.current) return;
+    if (!sourceId || !metricId || !dateAttrId) return;
+    setHasApplied(true);
+    fetchAnalytics();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metricId, aggregation, granularity, dateAttrId, dimTypeId, selectedDims, startDate, endDate]);
 
   // ── KPIs ──────────────────────────────────────────────────────────────
   const isMultiSeries = results.length > 0 && Array.isArray(results[0]?.data);
@@ -595,6 +604,7 @@ export default function DatasetDetailPage({ isActive }) {
   }, [dimensions, dimSearch, sourceId]);
 
   function toggleDim(id) {
+    userInteracted.current = true;
     setSelectedDims(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }
 
@@ -937,50 +947,43 @@ export default function DatasetDetailPage({ isActive }) {
               <div className="results-head">
                 <div className="results-title">Results</div>
                 <div className="results-cnt">{isMultiSeries ? flatMultiRows.length : results.length} total rows</div>
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {metricName && (
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 6, background: 'rgba(37,87,167,.08)', color: 'var(--blue)', border: '1px solid rgba(37,87,167,.18)' }}>
-                      {metricName}
-                    </span>
-                  )}
-                  {dateAttrName && (
-                    <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 9px', borderRadius: 6, background: 'var(--sf2)', color: 'var(--tx3)', border: '1px solid var(--bdr)' }}>
-                      {dateAttrName}
-                    </span>
-                  )}
-                </div>
+                <div className="results-pg" style={{ marginLeft: 'auto' }}>Page 1 of 1</div>
               </div>
               <div className="tw" style={{ overflowX: 'auto', width: '100%' }}>
-                <table style={{ width: '100%', minWidth: isMultiSeries ? 500 : 400, tableLayout: 'fixed' }}>
+                <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                   <colgroup>
-                    <col style={{ width: '6%' }} />
-                    <col style={{ width: isMultiSeries ? '31%' : '47%' }} />
-                    {isMultiSeries && <col style={{ width: '31%' }} />}
-                    <col />
+                    <col style={{ width: '8%' }} />
+                    <col style={{ width: '23%' }} />
+                    {isMultiSeries && <col style={{ width: '23%' }} />}
+                    <col style={{ width: '23%' }} />
+                    <col style={{ width: '23%' }} />
+                    {!isMultiSeries && <col style={{ width: '23%' }} />}
                   </colgroup>
                   <thead><tr>
-                    <th>#</th>
-                    <th>PERIOD</th>
-                    {isMultiSeries && <th>DIMENSION</th>}
-                    <th className="R">VALUE {unit === 'amount' && currentScaleObj.suffix ? `(${currentScaleObj.suffix})` : unit ? `(${unit})` : ''}</th>
+                    <th style={{ textAlign: 'center' }}>#</th>
+                    <th style={{ textAlign: 'center' }}>PERIOD</th>
+                    {isMultiSeries && <th style={{ textAlign: 'center' }}>DIMENSION</th>}
+                    <th style={{ textAlign: 'center' }}>VALUE {unit === 'amount' && currentScaleObj.suffix ? `(${currentScaleObj.suffix})` : unit ? `(${unit})` : ''}</th>
+                    <th style={{ textAlign: 'center' }}>METRIC</th>
+                    {!isMultiSeries && <th style={{ textAlign: 'center' }}>DATE ATTRIBUTE</th>}
                   </tr></thead>
                   <tbody>
                     {analyticsLoading ? (
                       <>
                         {[...Array(5)].map((_, i) => (
                           <tr key={i}>
-                            {[...Array(isMultiSeries ? 4 : 3)].map((__, j) => (
-                              <td key={j} style={{ padding: '12px 10px' }}>
-                                <span style={{ display:'inline-block', height:11, width: j===0?'20px':j===1?'60px':'80px', borderRadius:3, background:'linear-gradient(90deg,var(--sf2) 25%,var(--sf3) 50%,var(--sf2) 75%)', backgroundSize:'200% 100%', animation:`skel-shimmer 1.4s ${i*0.08}s ease-in-out infinite` }} />
+                            {[...Array(isMultiSeries ? 5 : 5)].map((__, j) => (
+                              <td key={j} style={{ padding: '12px 10px', textAlign: 'center' }}>
+                                <span style={{ display:'inline-block', height:11, width: j===0?'20px':'70px', borderRadius:3, background:'linear-gradient(90deg,var(--sf2) 25%,var(--sf3) 50%,var(--sf2) 75%)', backgroundSize:'200% 100%', animation:`skel-shimmer 1.4s ${i*0.08}s ease-in-out infinite` }} />
                               </td>
                             ))}
                           </tr>
                         ))}
                       </>
                     ) : analyticsError ? (
-                      <tr><td colSpan={isMultiSeries ? 4 : 3} style={{ textAlign: 'center', padding: '20px', color: 'var(--red)', fontSize: 12 }}>{analyticsError}</td></tr>
+                      <tr><td colSpan={isMultiSeries ? 5 : 5} style={{ textAlign: 'center', padding: '20px', color: 'var(--red)', fontSize: 12 }}>{analyticsError}</td></tr>
                     ) : results.length === 0 ? (
-                      <tr><td colSpan={isMultiSeries ? 4 : 3} style={{ textAlign: 'center', padding: '20px', color: 'var(--tx3)', fontSize: 12 }}>No data</td></tr>
+                      <tr><td colSpan={isMultiSeries ? 5 : 5} style={{ textAlign: 'center', padding: '20px', color: 'var(--tx3)', fontSize: 12 }}>No data</td></tr>
                     ) : isMultiSeries
                       ? flatMultiRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((row, i) => {
                           const rowNum = (page - 1) * PAGE_SIZE + i + 1;
@@ -989,15 +992,16 @@ export default function DatasetDetailPage({ isActive }) {
                           const mc = MULTI_SERIES_COLORS[dimIdx % MULTI_SERIES_COLORS.length];
                           return (
                             <tr key={i}>
-                              <td className="hh">{rowNum}</td>
-                              <td><strong>{row.period || '—'}</strong></td>
-                              <td>
-                                <span style={{ display:'inline-flex', alignItems:'center', gap:5 }}>
+                              <td style={{ textAlign: 'center' }} className="hh">{rowNum}</td>
+                              <td style={{ textAlign: 'center' }}><strong>{row.period || '—'}</strong></td>
+                              <td style={{ textAlign: 'center' }}>
+                                <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:5 }}>
                                   <span style={{ width:8, height:8, borderRadius:'50%', background:mc.border, flexShrink:0 }} />
                                   <span style={{ fontSize:11.5 }}>{row.dimension_name}</span>
                                 </span>
                               </td>
-                              <td className="nb R" style={{ color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
+                              <td style={{ textAlign: 'center', color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
+                              <td style={{ textAlign: 'center' }} className="mt">{row.metric_name || metricName || '—'}</td>
                             </tr>
                           );
                         })
@@ -1006,9 +1010,11 @@ export default function DatasetDetailPage({ isActive }) {
                           const val = Number(row.value ?? row.aggregate_value ?? row.metric_value ?? 0);
                           return (
                             <tr key={i}>
-                              <td className="hh">{rowNum}</td>
-                              <td><strong>{row.period || row.period_label || '—'}</strong></td>
-                              <td className="nb R" style={{ color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
+                              <td style={{ textAlign: 'center' }} className="hh">{rowNum}</td>
+                              <td style={{ textAlign: 'center' }}><strong>{row.period || row.period_label || '—'}</strong></td>
+                              <td style={{ textAlign: 'center', color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
+                              <td style={{ textAlign: 'center' }} className="mt">{row.metric_name || metricName || '—'}</td>
+                              <td style={{ textAlign: 'center' }} className="mt">{row.date_attribute_type_name || dateAttrName || '—'}</td>
                             </tr>
                           );
                         })
@@ -1108,7 +1114,7 @@ export default function DatasetDetailPage({ isActive }) {
                         Checking availability…
                       </div>
                     )} */}
-                    <select className="ctrl-sel" value={metricId ?? ''} onChange={e => setMetricId(e.target.value)}>
+                    <select className="ctrl-sel" value={metricId ?? ''} onChange={e => { userInteracted.current = true; setMetricId(e.target.value); }}>
                       {(availableMetricIds
                         ? metrics.filter(m => availableMetricIds.has(String(m.metric_id ?? m.id)))
                         : metrics
@@ -1154,7 +1160,7 @@ export default function DatasetDetailPage({ isActive }) {
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 4 }}>
                 <div className="ctrl-blk" style={{ flex: 1 }}>
                   <div className="ctrl-lbl">Aggregation</div>
-                  <select className="ctrl-sel" value={aggregation} onChange={e => setAggregation(e.target.value)}>
+                  <select className="ctrl-sel" value={aggregation} onChange={e => { userInteracted.current = true; setAggregation(e.target.value); }}>
                     {AGGREGATIONS.map(a => <option key={a} value={a}>{a.toUpperCase()}</option>)}
                   </select>
                 </div>
@@ -1172,7 +1178,7 @@ export default function DatasetDetailPage({ isActive }) {
 
               <div className="ctrl-blk" style={{ marginBottom: 10 }}>
                 <div className="ctrl-lbl">Periodicity</div>
-                <select className="ctrl-sel" value={granularity} onChange={e => setGranularity(e.target.value)}>
+                <select className="ctrl-sel" value={granularity} onChange={e => { userInteracted.current = true; setGranularity(e.target.value); }}>
                   {GRANULARITIES.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
                 </select>
               </div>
@@ -1180,7 +1186,7 @@ export default function DatasetDetailPage({ isActive }) {
               <div className="ctrl-blk">
                 <div className="ctrl-lbl">Date Attribute</div>
                 {metaLoading ? <div style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 0' }}><div className="ld-spin ld-spin-sm" /><span style={{ fontSize:11, color:'var(--tx3)' }}>Loading…</span></div> : (
-                  <select className="ctrl-sel" value={dateAttrId ?? ''} onChange={e => setDateAttrId(e.target.value)}>
+                  <select className="ctrl-sel" value={dateAttrId ?? ''} onChange={e => { userInteracted.current = true; setDateAttrId(e.target.value); }}>
                     {dateAttrTypes.map(d => {
                       const id = d.date_attribute_type_id ?? d.id;
                       return <option key={id} value={id}>{d.attribute_name || d.name || d.date_attribute_type_name || String(id)}</option>;
@@ -1199,7 +1205,7 @@ export default function DatasetDetailPage({ isActive }) {
                   <div className="ctrl-blk" style={{ marginBottom: dimTypeId ? 10 : 0 }}>
                     <div className="ctrl-lbl">Dimension Type</div>
                     {metaLoading ? <div style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 0' }}><div className="ld-spin ld-spin-sm" /><span style={{ fontSize:11, color:'var(--tx3)' }}>Loading…</span></div> : (
-                      <select className="ctrl-sel" value={dimTypeId ?? ''} onChange={e => setDimTypeId(e.target.value || null)}>
+                      <select className="ctrl-sel" value={dimTypeId ?? ''} onChange={e => { userInteracted.current = true; setDimTypeId(e.target.value || null); }}>
                         <option value="">— None —</option>
                         {dimTypes.map(d => {
                           const id = d.dimension_type_id ?? d.id;
@@ -1271,25 +1277,15 @@ export default function DatasetDetailPage({ isActive }) {
               <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--blue)', marginBottom: 10 }}>Date Range</div>
               <div className="ctrl-blk" style={{ marginBottom: 8 }}>
                 <div className="ctrl-lbl">From</div>
-                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="ctrl-sel" style={{ fontFamily: 'var(--mo)', fontSize: 11, color: 'var(--tx)', cursor: 'pointer' }} />
+                <input type="date" value={startDate} onChange={e => { userInteracted.current = true; setStartDate(e.target.value); }} className="ctrl-sel" style={{ fontFamily: 'var(--mo)', fontSize: 11, color: 'var(--tx)', cursor: 'pointer' }} />
               </div>
               <div className="ctrl-blk">
                 <div className="ctrl-lbl">To</div>
-                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="ctrl-sel" style={{ fontFamily: 'var(--mo)', fontSize: 11, color: 'var(--tx)', cursor: 'pointer' }} />
+                <input type="date" value={endDate} onChange={e => { userInteracted.current = true; setEndDate(e.target.value); }} className="ctrl-sel" style={{ fontFamily: 'var(--mo)', fontSize: 11, color: 'var(--tx)', cursor: 'pointer' }} />
               </div>
 
             </div>
 
-            {/* Drawer footer */}
-            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--bdr)', flexShrink: 0 }}>
-              <button
-                className="btn"
-                style={{ width: '100%', justifyContent: 'center', background: 'var(--blue)', color: '#fff', fontWeight: 600, fontSize: 12, padding: '8px 0' }}
-                onClick={() => { setHasApplied(true); fetchAnalytics(); }}
-              >
-                Apply
-              </button>
-            </div>
 
           </div>{/* /drawer */}
       </div>
