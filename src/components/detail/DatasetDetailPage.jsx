@@ -102,6 +102,17 @@ const CHART_COLORS = {
   pie:  { border: '#fff',    bg: ['#2557a7','#2d8a4e','#c47a1e','#c0392b','#6d3fc0','#0e7490','#8b4513'] },
 };
 
+const MULTI_SERIES_COLORS = [
+  { border:'#2557a7', bg:'rgba(37,87,167,.13)'  },
+  { border:'#2d8a4e', bg:'rgba(45,138,78,.13)'  },
+  { border:'#c47a1e', bg:'rgba(196,122,30,.13)' },
+  { border:'#c0392b', bg:'rgba(192,57,43,.13)'  },
+  { border:'#6d3fc0', bg:'rgba(109,63,192,.13)' },
+  { border:'#0e7490', bg:'rgba(14,116,144,.13)' },
+  { border:'#975b1e', bg:'rgba(151,91,30,.13)'  },
+  { border:'#0f766e', bg:'rgba(15,118,110,.13)' },
+];
+
 const KPI_ACCENT = ['#2557a7', '#2d8a4e', '#c47a1e', '#6d3fc0'];
 
 function extractPeriodFromS3Url(url) {
@@ -397,18 +408,48 @@ export default function DatasetDetailPage({ isActive }) {
   // analytics only run when user explicitly clicks Apply
 
   // ── KPIs ──────────────────────────────────────────────────────────────
+  const isMultiSeries = results.length > 0 && Array.isArray(results[0]?.data);
+
+  const flatMultiRows = useMemo(() => {
+    if (!isMultiSeries) return [];
+    return results.flatMap(s =>
+      s.data.map(d => ({
+        period: d.period,
+        value: d.value,
+        metric_text: d.metric_text,
+        dimension_name: s.dimension_name,
+        metric_name: s.metric_name,
+        dataset_name: s.dataset_name,
+      }))
+    ).sort((a, b) => String(a.period).localeCompare(String(b.period)));
+  }, [results, isMultiSeries]);
+
   const kpis = useMemo(() => {
-    const values = results.map(r => Number(r.value ?? r.aggregate_value ?? r.metric_value ?? 0));
+    let values;
+    if (isMultiSeries) {
+      values = results.flatMap(s => s.data.map(d => Number(d.value ?? 0)));
+    } else {
+      values = results.map(r => Number(r.value ?? r.aggregate_value ?? r.metric_value ?? 0));
+    }
     if (!values.length) return { total: 0, peak: 0, avg: 0, peakPeriod: '—', points: 0 };
-    const total   = values.reduce((a, b) => a + b, 0);
-    const peak    = Math.max(...values);
-    const peakIdx = values.indexOf(peak);
-    return {
-      total, peak, avg: total / values.length,
-      peakPeriod: results[peakIdx]?.period || '—',
-      points: values.length,
-    };
-  }, [results]);
+    const total = values.reduce((a, b) => a + b, 0);
+    const peak  = Math.max(...values);
+    let peakPeriod = '—';
+    if (isMultiSeries) {
+      outer: for (const s of results) {
+        for (const d of s.data) {
+          if (Number(d.value ?? 0) === peak) { peakPeriod = `${d.period} (${s.dimension_name})`; break outer; }
+        }
+      }
+    } else {
+      const peakIdx = values.indexOf(peak);
+      peakPeriod = results[peakIdx]?.period || '—';
+    }
+    const points = isMultiSeries
+      ? [...new Set(results.flatMap(s => s.data.map(d => d.period)))].length
+      : values.length;
+    return { total, peak, avg: total / values.length, peakPeriod, points };
+  }, [results, isMultiSeries]);
 
   // ── chart ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -419,34 +460,70 @@ export default function DatasetDetailPage({ isActive }) {
     }
     if (chartInstance.current) { chartInstance.current.destroy(); chartInstance.current = null; }
 
-    const labels = results.map(r => r.period || r.label || '');
-    const data   = results.map(r => {
-      const raw = Number(r.value ?? r.aggregate_value ?? r.metric_value ?? 0);
-      return (unit === 'amount' && currentScaleObj.divisor > 1) ? raw / currentScaleObj.divisor : raw;
-    });
-    const c      = CHART_COLORS[chartType] || CHART_COLORS.line;
-    const dark   = document.documentElement.getAttribute('data-theme') === 'dark';
-    const gc     = dark ? 'rgba(255,255,255,.05)' : 'rgba(26,28,24,.04)';
-    const tc2    = dark ? '#686868' : '#9a9d92';
+    const multi = Array.isArray(results[0]?.data);
+    const dark  = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gc    = dark ? 'rgba(255,255,255,.05)' : 'rgba(26,28,24,.04)';
+    const tc2   = dark ? '#686868' : '#9a9d92';
 
-    const dataset = chartType === 'pie'
-      ? { data, backgroundColor: c.bg, borderColor: c.border, borderWidth: 2, hoverOffset: 8 }
-      : {
-          label: metrics.find(m => String(m.metric_id ?? m.id) === String(metricId))?.metric_name
-                 || metrics.find(m => String(m.metric_id ?? m.id) === String(metricId))?.name || '',
+    let labels, datasets, chartKind;
+
+    if (multi) {
+      const allPeriods = [...new Set(results.flatMap(s => s.data.map(d => d.period)))].sort();
+      labels = allPeriods;
+      chartKind = 'line';
+      datasets = results.map((series, idx) => {
+        const map = Object.fromEntries(series.data.map(d => [d.period, Number(d.value ?? 0)]));
+        const data = allPeriods.map(p => {
+          const raw = map[p] ?? null;
+          return raw !== null && unit === 'amount' && currentScaleObj.divisor > 1 ? raw / currentScaleObj.divisor : raw;
+        });
+        const mc = MULTI_SERIES_COLORS[idx % MULTI_SERIES_COLORS.length];
+        return {
+          label: series.dimension_name,
           data,
-          borderColor: c.border, backgroundColor: c.bg,
-          borderWidth: chartType === 'bar' ? 0 : 2.5,
-          fill: chartType === 'area', tension: 0.42,
-          borderRadius: chartType === 'bar' ? 5 : 0,
-          pointRadius: chartType === 'line' ? 4 : 0,
-          pointBackgroundColor: c.border, pointBorderColor: '#fff', pointBorderWidth: 1.5,
+          borderColor: mc.border,
+          backgroundColor: mc.bg,
+          borderWidth: 2,
+          fill: false,
+          tension: 0.42,
+          pointRadius: 3,
+          pointBackgroundColor: mc.border,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1.5,
+          spanGaps: true,
         };
+      });
+    } else {
+      labels = results.map(r => r.period || r.label || '');
+      const data = results.map(r => {
+        const raw = Number(r.value ?? r.aggregate_value ?? r.metric_value ?? 0);
+        return (unit === 'amount' && currentScaleObj.divisor > 1) ? raw / currentScaleObj.divisor : raw;
+      });
+      const c = CHART_COLORS[chartType] || CHART_COLORS.line;
+      chartKind = chartType === 'area' ? 'line' : chartType;
+      datasets = [chartType === 'pie'
+        ? { data, backgroundColor: c.bg, borderColor: c.border, borderWidth: 2, hoverOffset: 8 }
+        : {
+            label: metrics.find(m => String(m.metric_id ?? m.id) === String(metricId))?.metric_name
+                   || metrics.find(m => String(m.metric_id ?? m.id) === String(metricId))?.name || '',
+            data,
+            borderColor: c.border, backgroundColor: c.bg,
+            borderWidth: chartType === 'bar' ? 0 : 2.5,
+            fill: chartType === 'area', tension: 0.42,
+            borderRadius: chartType === 'bar' ? 5 : 0,
+            pointRadius: chartType === 'line' ? 4 : 0,
+            pointBackgroundColor: c.border, pointBorderColor: '#fff', pointBorderWidth: 1.5,
+          }
+      ];
+    }
 
     const opts = {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: chartType === 'pie', labels: { color: dark ? '#909090' : '#5a5d54', font: { size: 11 }, boxWidth: 12, padding: 14 } },
+        legend: {
+          display: multi || chartType === 'pie',
+          labels: { color: dark ? '#909090' : '#5a5d54', font: { size: 11 }, boxWidth: 12, padding: 14 },
+        },
         tooltip: {
           backgroundColor: dark ? '#0d0d0d' : '#1a1c18',
           borderColor: dark ? 'rgba(255,255,255,.12)' : 'rgba(26,28,24,.15)',
@@ -456,16 +533,17 @@ export default function DatasetDetailPage({ isActive }) {
           callbacks: {
             label: ctx => {
               const v = ctx.parsed?.y ?? ctx.parsed;
+              const dimPrefix = multi ? `${ctx.dataset.label}: ` : '';
               if (unit === 'amount' && currentScaleObj.divisor > 1) {
-                return ` ${v.toLocaleString('en-IN', { maximumFractionDigits: 2 })} ${currentScaleObj.suffix}`;
+                return ` ${dimPrefix}${v.toLocaleString('en-IN', { maximumFractionDigits: 2 })} ${currentScaleObj.suffix}`;
               }
-              return ` ${fmt(v, unit)} ${unit}`;
+              return ` ${dimPrefix}${fmt(v, unit)} ${unit}`;
             },
           },
         },
       },
     };
-    if (chartType !== 'pie') {
+    if (multi || chartType !== 'pie') {
       opts.scales = {
         x: { grid: { color: gc, lineWidth: .5 }, ticks: { color: tc2, font: { size: 11 } }, border: { display: false } },
         y: { grid: { color: gc, lineWidth: .5 }, ticks: { color: tc2, font: { family: "'JetBrains Mono',monospace", size: 10.5 }, callback: v => {
@@ -475,11 +553,7 @@ export default function DatasetDetailPage({ isActive }) {
         }}, border: { display: false } },
       };
     }
-    chartInstance.current = new Chart(chartRef.current, {
-      type: chartType === 'area' ? 'line' : chartType,
-      data: { labels, datasets: [dataset] },
-      options: opts,
-    });
+    chartInstance.current = new Chart(chartRef.current, { type: chartKind, data: { labels, datasets }, options: opts });
   }, [results, chartType, unit, metricId, metrics, currentScaleObj]);
 
   // ── derived ───────────────────────────────────────────────────────────
@@ -854,17 +928,18 @@ export default function DatasetDetailPage({ isActive }) {
             {hasApplied && <div className="results-card">
               <div className="results-head">
                 <div className="results-title">Results</div>
-                <div className="results-cnt">{results.length} total rows</div>
+                <div className="results-cnt">{isMultiSeries ? flatMultiRows.length : results.length} total rows</div>
                 <div className="results-pg" style={{ marginLeft: 'auto' }}>Page 1 of 1</div>
               </div>
               <div className="tw" style={{ overflowX: 'auto', width: '100%' }}>
-                <table style={{ width: '100%', minWidth: 640 }}>
+                <table style={{ width: '100%', minWidth: isMultiSeries ? 700 : 640 }}>
                   <thead><tr>
                     <th style={{ width: 32 }}>#</th>
                     <th>PERIOD</th>
+                    {isMultiSeries && <th>DIMENSION</th>}
                     <th className="R">VALUE {unit === 'amount' && currentScaleObj.suffix ? `(${currentScaleObj.suffix})` : unit ? `(${unit})` : ''}</th>
                     <th>METRIC</th>
-                    <th>DATE ATTRIBUTE</th>
+                    {!isMultiSeries && <th>DATE ATTRIBUTE</th>}
                     <th>DATASET</th>
                   </tr></thead>
                   <tbody>
@@ -872,7 +947,7 @@ export default function DatasetDetailPage({ isActive }) {
                       <>
                         {[...Array(5)].map((_, i) => (
                           <tr key={i}>
-                            {[...Array(6)].map((__, j) => (
+                            {[...Array(isMultiSeries ? 6 : 6)].map((__, j) => (
                               <td key={j} style={{ padding: '12px 10px' }}>
                                 <span style={{ display:'inline-block', height:11, width: j===0?'20px': j===1?'55px':j===2?'60px':j===3?'100px':j===4?'80px':'90px', borderRadius:3, background:'linear-gradient(90deg,var(--sf2) 25%,var(--sf3) 50%,var(--sf2) 75%)', backgroundSize:'200% 100%', animation:`skel-shimmer 1.4s ${i*0.08}s ease-in-out infinite` }} />
                               </td>
@@ -881,39 +956,66 @@ export default function DatasetDetailPage({ isActive }) {
                         ))}
                       </>
                     ) : analyticsError ? (
-                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: '20px', color: 'var(--red)', fontSize: 12 }}>{analyticsError}</td></tr>
+                      <tr><td colSpan={isMultiSeries ? 6 : 6} style={{ textAlign: 'center', padding: '20px', color: 'var(--red)', fontSize: 12 }}>{analyticsError}</td></tr>
                     ) : results.length === 0 ? (
-                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: '20px', color: 'var(--tx3)', fontSize: 12 }}>No data</td></tr>
-                    ) : results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((row, i) => {
-                      const rowNum = (page - 1) * PAGE_SIZE + i + 1;
-                      const val = Number(row.value ?? row.aggregate_value ?? row.metric_value ?? 0);
-                      return (
-                        <tr key={i}>
-                          <td className="hh">{rowNum}</td>
-                          <td><strong>{row.period || row.period_label || '—'}</strong></td>
-                          <td className="nb R" style={{ color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
-                          <td className="mt">{row.metric_name || metricName || '—'}</td>
-                          <td className="mt">{row.date_attribute_type_name || dateAttrName || '—'}</td>
-                          <td className="mt">{row.dataset_name || datasetInfo?.title || '—'}</td>
-                        </tr>
-                      );
-                    })}
+                      <tr><td colSpan={isMultiSeries ? 6 : 6} style={{ textAlign: 'center', padding: '20px', color: 'var(--tx3)', fontSize: 12 }}>No data</td></tr>
+                    ) : isMultiSeries
+                      ? flatMultiRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((row, i) => {
+                          const rowNum = (page - 1) * PAGE_SIZE + i + 1;
+                          const val = Number(row.value ?? 0);
+                          const dimIdx = results.findIndex(s => s.dimension_name === row.dimension_name);
+                          const mc = MULTI_SERIES_COLORS[dimIdx % MULTI_SERIES_COLORS.length];
+                          return (
+                            <tr key={i}>
+                              <td className="hh">{rowNum}</td>
+                              <td><strong>{row.period || '—'}</strong></td>
+                              <td>
+                                <span style={{ display:'inline-flex', alignItems:'center', gap:5 }}>
+                                  <span style={{ width:8, height:8, borderRadius:'50%', background:mc.border, flexShrink:0 }} />
+                                  <span style={{ fontSize:11.5 }}>{row.dimension_name}</span>
+                                </span>
+                              </td>
+                              <td className="nb R" style={{ color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
+                              <td className="mt">{row.metric_name || metricName || '—'}</td>
+                              <td className="mt">{row.dataset_name || datasetInfo?.title || '—'}</td>
+                            </tr>
+                          );
+                        })
+                      : results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((row, i) => {
+                          const rowNum = (page - 1) * PAGE_SIZE + i + 1;
+                          const val = Number(row.value ?? row.aggregate_value ?? row.metric_value ?? 0);
+                          return (
+                            <tr key={i}>
+                              <td className="hh">{rowNum}</td>
+                              <td><strong>{row.period || row.period_label || '—'}</strong></td>
+                              <td className="nb R" style={{ color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
+                              <td className="mt">{row.metric_name || metricName || '—'}</td>
+                              <td className="mt">{row.date_attribute_type_name || dateAttrName || '—'}</td>
+                              <td className="mt">{row.dataset_name || datasetInfo?.title || '—'}</td>
+                            </tr>
+                          );
+                        })
+                    }
                   </tbody>
                 </table>
               </div>
+              {(() => {
+                const rowList = isMultiSeries ? flatMultiRows : results;
+                const totalPages = Math.ceil(rowList.length / PAGE_SIZE);
+                return (
               <div className="results-foot" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 11.5, color: 'var(--tx3)' }}>
-                  {results.length === 0 ? '0 rows' : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, results.length)} of ${results.length}`}
+                  {rowList.length === 0 ? '0 rows' : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, rowList.length)} of ${rowList.length}`}
                 </span>
-                {results.length > PAGE_SIZE && (
+                {rowList.length > PAGE_SIZE && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <button
                       onClick={() => setPage(p => Math.max(1, p - 1))}
                       disabled={page === 1}
                       style={{ padding: '3px 9px', borderRadius: 6, border: '1px solid var(--bdr)', background: 'var(--sf2)', color: page === 1 ? 'var(--tx3)' : 'var(--tx)', cursor: page === 1 ? 'default' : 'pointer', fontSize: 12 }}
                     >‹</button>
-                    {Array.from({ length: Math.ceil(results.length / PAGE_SIZE) }, (_, i) => i + 1)
-                      .filter(p => p === 1 || p === Math.ceil(results.length / PAGE_SIZE) || Math.abs(p - page) <= 1)
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
                       .reduce((acc, p, idx, arr) => {
                         if (idx > 0 && p - arr[idx - 1] > 1) acc.push('…');
                         acc.push(p);
@@ -925,13 +1027,14 @@ export default function DatasetDetailPage({ isActive }) {
                       )
                     }
                     <button
-                      onClick={() => setPage(p => Math.min(Math.ceil(results.length / PAGE_SIZE), p + 1))}
-                      disabled={page === Math.ceil(results.length / PAGE_SIZE)}
-                      style={{ padding: '3px 9px', borderRadius: 6, border: '1px solid var(--bdr)', background: 'var(--sf2)', color: page === Math.ceil(results.length / PAGE_SIZE) ? 'var(--tx3)' : 'var(--tx)', cursor: page === Math.ceil(results.length / PAGE_SIZE) ? 'default' : 'pointer', fontSize: 12 }}
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      style={{ padding: '3px 9px', borderRadius: 6, border: '1px solid var(--bdr)', background: 'var(--sf2)', color: page === totalPages ? 'var(--tx3)' : 'var(--tx)', cursor: page === totalPages ? 'default' : 'pointer', fontSize: 12 }}
                     >›</button>
                   </div>
                 )}
               </div>
+              ); })()}
             </div>}
 
           </div>

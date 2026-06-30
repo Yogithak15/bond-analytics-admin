@@ -378,6 +378,76 @@ function TableRow({d,isFav,onFav,onPreview,isDark}){
   );
 }
 
+function SkeletonGridCard(){
+  const p={background:'linear-gradient(90deg,#F3F4F6 25%,#E9EAEC 50%,#F3F4F6 75%)',backgroundSize:'200% 100%',animation:'skel-shimmer 1.4s ease-in-out infinite',borderRadius:4};
+  return(
+    <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:14,display:'flex',flexDirection:'column',gap:10}}>
+      <div><div style={{height:13,width:'78%',...p,marginBottom:6}}/><div style={{height:9,width:'50%',...p}}/></div>
+      <div style={{display:'flex',gap:5}}><div style={{height:18,width:44,borderRadius:20,...p}}/><div style={{height:18,width:54,borderRadius:20,...p}}/><div style={{height:18,width:50,borderRadius:20,...p}}/></div>
+      <div style={{display:'flex',gap:12,borderTop:`1px solid ${C.border}`,paddingTop:8}}>
+        <div><div style={{height:16,width:28,...p,marginBottom:4}}/><div style={{height:9,width:40,...p}}/></div>
+        <div><div style={{height:16,width:36,...p,marginBottom:4}}/><div style={{height:9,width:60,...p}}/></div>
+      </div>
+    </div>
+  );
+}
+
+function GridCard({d,isFav,onFav,onPreview,isDark}){
+  const [hov,setHov]=useState(false);
+  const {SRC,FREQ}=mkBadgeStyles(isDark);
+  const ss=SRC[d.src]||SRC.other;
+  const fs=FREQ[d.freq]||FREQ.weekly;
+  return(
+    <div onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{
+      background:C.card,border:`1px solid ${hov?C.borderStr:C.border}`,borderRadius:10,
+      padding:14,display:'flex',flexDirection:'column',gap:10,
+      transform:hov?'translateY(-2px)':'none',transition:'all .15s',
+    }}>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8}}>
+        <div style={{minWidth:0,flex:1}}>
+          <div onClick={()=>onPreview(d)} style={{fontSize:13,fontWeight:700,color:hov?C.blue:C.text,cursor:'pointer',lineHeight:1.4,transition:'color .12s',overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>
+            {d.title}
+          </div>
+          <div style={{fontSize:10,color:C.textFaint,fontFamily:'monospace',marginTop:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+            {d.id}
+          </div>
+        </div>
+        {isFav&&<span style={{color:'#F59E0B',flexShrink:0,fontSize:13,lineHeight:1}}>★</span>}
+      </div>
+      <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+        <span style={{...ss,fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:20,display:'inline-flex',whiteSpace:'nowrap'}}>{d.srcLabel}</span>
+        <span style={{...fs,fontSize:10,fontWeight:600,padding:'2px 7px',borderRadius:20,display:'inline-flex',whiteSpace:'nowrap'}}>{d.freq.charAt(0).toUpperCase()+d.freq.slice(1)}</span>
+        <StatusPill status={d.status} isDark={isDark}/>
+      </div>
+      <div style={{display:'flex',alignItems:'flex-end',gap:12,borderTop:`1px solid ${C.border}`,paddingTop:8}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:700,color:C.text,fontVariantNumeric:'tabular-nums',lineHeight:1}}>{d.metrics}</div>
+          <div style={{fontSize:10,color:C.textFaint,marginTop:2}}>Metrics</div>
+        </div>
+        <div>
+          <div style={{fontSize:16,fontWeight:700,color:C.text,fontVariantNumeric:'tabular-nums',lineHeight:1}}>{d.dims.toLocaleString('en-IN')}</div>
+          <div style={{fontSize:10,color:C.textFaint,marginTop:2}}>Dimensions</div>
+        </div>
+        {d.updated&&<div style={{marginLeft:'auto',textAlign:'right'}}>
+          <div style={{fontSize:11,color:C.textSec,fontWeight:500}}>{d.updated}</div>
+          <div style={{fontSize:10,color:C.textFaint}}>{relativeTime(d.updated)}</div>
+        </div>}
+      </div>
+      <div style={{display:'flex',gap:4,justifyContent:'flex-end'}}>
+        <ActionBtn title="Full Analysis" onClick={()=>window.openDetail?.(d.sourceId)}>
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </ActionBtn>
+        <ActionBtn title="Quick Preview" onClick={()=>onPreview(d)}>
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+        </ActionBtn>
+        <ActionBtn title="Source files" onClick={()=>openSourceUrlsModal(d.sourceId,d.title)}>
+          <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+        </ActionBtn>
+      </div>
+    </div>
+  );
+}
+
 function PgBtn({children,disabled,active,onClick,title}){
   const [hov,setHov]=useState(false);
   return(
@@ -423,6 +493,7 @@ export default function CatalogPage({isActive}){
   const [favorites,setFavorites]=useState(()=>{try{return new Set(JSON.parse(localStorage.getItem('bb-fav')||'[]'));}catch{return new Set();}});
   const [preview,setPreview]=useState(null);
   const [filtersOpen,setFiltersOpen]=useState(false);
+  const [viewMode,setViewMode]=useState('table');
   const searchRef=useRef(null);
   const PAGE_SIZE=isMobile?8:12;
 
@@ -450,6 +521,7 @@ export default function CatalogPage({isActive}){
       }
       const mapped=all.map(mapSource).filter(d=>d.sourceId!==11);
       setDatasets(mapped);window.DATASETS=mapped;setLoading(false);
+      window.dispatchEvent(new CustomEvent('catalog-count',{detail:{count:mapped.length}}));
       setEnriching(true);
       const enriched=await Promise.all(mapped.map(async(d)=>{
         try{
@@ -507,15 +579,6 @@ export default function CatalogPage({isActive}){
 
   const resetFilters=()=>{setSearch('');setSrcFilter('all');setStatusFilter('all');setFreqFilter('all');};
 
-  const selStyle={
-    height:34,padding:'0 28px 0 10px',borderRadius:8,
-    border:`1px solid ${C.border}`,background:C.card,
-    color:C.textSec,fontSize:12.5,fontFamily:'inherit',
-    cursor:'pointer',outline:'none',appearance:'none',
-    backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
-    backgroundRepeat:'no-repeat',backgroundPosition:'right 8px center',
-    boxShadow:C.shadowSm,
-  };
 
   const COLS=[
     {key:'name',   label:'Dataset',      w:'auto'},
@@ -543,13 +606,19 @@ export default function CatalogPage({isActive}){
     <div className={`page${isActive?' on':''}`} id="page-catalog" style={{background:C.bg,color:C.text,fontFamily:'Inter,-apple-system,BlinkMacSystemFont,sans-serif',overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
       <div style={{padding:`${py}px ${px}px 36px`}}>
 
+        {/* Breadcrumb */}
+        <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:10,fontSize:11.5,color:C.textFaint}}>
+          <span>Home</span>
+          <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <span style={{color:C.textSec,fontWeight:500}}>Dataset Catalog</span>
+        </div>
+
         {/* Header */}
         <div style={{display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',marginBottom:isMobile?14:18,gap:10,flexWrap:'wrap'}}>
           <div>
             <h1 style={{fontSize:isMobile?20:24,fontWeight:700,color:C.text,letterSpacing:'-.4px',margin:0,lineHeight:1.2}}>Dataset Catalog</h1>
             <p style={{fontSize:isMobile?12:13,color:C.textFaint,margin:'3px 0 0',fontWeight:400}}>Manage datasets, metrics, dimensions and ingestion status.</p>
           </div>
-         
         </div>
 
         {/* Stats Cards */}
@@ -560,131 +629,155 @@ export default function CatalogPage({isActive}){
           <StatCard icon={<><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></>} title="Dimensions" value={loading?0:summary.dims} desc="Unique values" accent="orange" loading={loading} enriching={enriching} isMobile={isMobile} isDark={isDark}/>
         </div>
 
-        {/* Search + Filters */}
-        <div style={{display:'flex',gap:8,marginBottom:10,flexWrap:'wrap',alignItems:'center'}}>
-          <div style={{flex:1,minWidth:isMobile?'100%':200,position:'relative',display:'flex',alignItems:'center'}}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke={C.textFaint} strokeWidth="2" strokeLinecap="round" style={{position:'absolute',left:11,pointerEvents:'none'}}>
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input ref={searchRef} value={search} onChange={e=>setSearch(e.target.value)}
-              placeholder={isMobile?'Search…':'Search datasets, sources…'}
-              style={{width:'100%',height:36,padding:'0 32px 0 34px',border:`1.5px solid ${C.border}`,borderRadius:9,background:C.card,color:C.text,fontSize:13,fontFamily:'inherit',outline:'none',boxShadow:C.shadowSm,transition:'border-color .15s,box-shadow .15s'}}
-              onFocus={e=>{e.target.style.borderColor=C.blue;e.target.style.boxShadow=`0 0 0 3px rgba(37,99,235,.1)`;}}
-              onBlur={e=>{e.target.style.borderColor=C.border;e.target.style.boxShadow=C.shadowSm;}}
-            />
-            {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:9,background:'none',border:'none',cursor:'pointer',color:C.textFaint,display:'flex',padding:2}}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>}
-          </div>
+        {/* Search */}
+        <div style={{marginBottom:10,position:'relative',display:'flex',alignItems:'center'}}>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke={C.textFaint} strokeWidth="2" strokeLinecap="round" style={{position:'absolute',left:11,pointerEvents:'none'}}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input ref={searchRef} value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder={isMobile?'Search…':'Search datasets, sources…'}
+            style={{width:'100%',height:36,padding:'0 32px 0 34px',border:`1.5px solid ${C.border}`,borderRadius:9,background:C.card,color:C.text,fontSize:13,fontFamily:'inherit',outline:'none',boxShadow:C.shadowSm,transition:'border-color .15s,box-shadow .15s'}}
+            onFocus={e=>{e.target.style.borderColor=C.blue;e.target.style.boxShadow=`0 0 0 3px rgba(37,99,235,.1)`;}}
+            onBlur={e=>{e.target.style.borderColor=C.border;e.target.style.boxShadow=C.shadowSm;}}
+          />
+          {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:9,background:'none',border:'none',cursor:'pointer',color:C.textFaint,display:'flex',padding:2}}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>}
+        </div>
 
-          {/* filters — on mobile collapse into a button */}
-          {isMobile?(
-            <>
-              <button onClick={()=>setFiltersOpen(o=>!o)} style={{height:36,padding:'0 12px',borderRadius:9,border:`1.5px solid ${filtersOpen||hasFilters?C.blue:C.border}`,background:filtersOpen||hasFilters?C.blueLt:C.card,color:filtersOpen||hasFilters?C.blue:C.textSec,fontSize:12.5,fontWeight:500,cursor:'pointer',display:'flex',alignItems:'center',gap:5,boxShadow:C.shadowSm}}>
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                Filters{hasFilters?' ·':''}{(srcFilter!=='all'?1:0)+(freqFilter!=='all'?1:0)+(statusFilter!=='all'?1:0)>0?` ${(srcFilter!=='all'?1:0)+(freqFilter!=='all'?1:0)+(statusFilter!=='all'?1:0)}`:''}
-              </button>
-              {filtersOpen&&(
-                <div style={{width:'100%',display:'flex',gap:8,flexWrap:'wrap'}}>
-                  <select value={srcFilter} onChange={e=>setSrcFilter(e.target.value)} style={{...selStyle,flex:1,minWidth:110}}>
-                    <option value="all">All Sources</option>
-                    {Object.entries(uniqueSources).map(([k,v])=><option key={k} value={k}>{v}</option>)}
-                  </select>
-                  <select value={freqFilter} onChange={e=>setFreqFilter(e.target.value)} style={{...selStyle,flex:1,minWidth:110}}>
-                    <option value="all">All Frequencies</option>
-                    <option value="daily">Daily</option><option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option><option value="quarterly">Quarterly</option>
-                  </select>
-                  <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{...selStyle,flex:1,minWidth:100}}>
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option><option value="inactive">Inactive</option>
-                  </select>
-                  {hasFilters&&<button onClick={resetFilters} style={{height:34,padding:'0 10px',borderRadius:8,border:`1px solid ${C.border}`,background:'none',color:C.danger,fontSize:12,cursor:'pointer'}}>Reset</button>}
-                </div>
-              )}
-            </>
-          ):(
-            <>
-              <select value={srcFilter} onChange={e=>setSrcFilter(e.target.value)} style={selStyle}>
-                <option value="all">All Sources</option>
-                {Object.entries(uniqueSources).map(([k,v])=><option key={k} value={k}>{v}</option>)}
-              </select>
-              <select value={freqFilter} onChange={e=>setFreqFilter(e.target.value)} style={selStyle}>
-                <option value="all">All Frequencies</option>
-                <option value="daily">Daily</option><option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option><option value="quarterly">Quarterly</option>
-              </select>
-              <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={selStyle}>
-                <option value="all">All Status</option>
-                <option value="active">Active</option><option value="inactive">Inactive</option>
-              </select>
-              {hasFilters&&(
-                <button onClick={resetFilters} style={{height:34,padding:'0 10px',borderRadius:8,border:`1px solid ${C.border}`,background:'none',color:C.danger,fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}} onMouseOver={e=>e.currentTarget.style.borderColor='#FCA5A5'} onMouseOut={e=>e.currentTarget.style.borderColor=C.border}>
-                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Reset
+        {/* Source + Freq pill chips */}
+        <div style={{display:'flex',flexWrap:'wrap',gap:isMobile?8:14,marginBottom:12,alignItems:'center'}}>
+          <div style={{display:'flex',gap:5,alignItems:'center',flexWrap:'wrap'}}>
+            <span style={{fontSize:10.5,color:C.textFaint,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',whiteSpace:'nowrap'}}>Source:</span>
+            {[{k:'all',v:'All'},...Object.entries(uniqueSources).map(([k,v])=>({k,v}))].map(({k,v})=>{
+              const on=srcFilter===k;
+              return(
+                <button key={k} onClick={()=>setSrcFilter(k)} style={{height:26,padding:'0 11px',borderRadius:20,border:`1px solid ${on?C.blue:C.border}`,background:on?C.blue:'transparent',color:on?'#fff':C.textSec,fontSize:11.5,fontWeight:on?600:400,cursor:'pointer',transition:'all .13s',whiteSpace:'nowrap'}}>
+                  {v}
                 </button>
-              )}
-            </>
+              );
+            })}
+          </div>
+          <div style={{display:'flex',gap:5,alignItems:'center',flexWrap:'wrap'}}>
+            <span style={{fontSize:10.5,color:C.textFaint,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',whiteSpace:'nowrap'}}>Freq:</span>
+            {[{k:'all',v:'All'},{k:'daily',v:'Daily'},{k:'weekly',v:'Weekly'},{k:'monthly',v:'Monthly'},{k:'quarterly',v:'Quarterly'}].map(({k,v})=>{
+              const on=freqFilter===k;
+              return(
+                <button key={k} onClick={()=>setFreqFilter(k)} style={{height:26,padding:'0 11px',borderRadius:20,border:`1px solid ${on?C.blue:C.border}`,background:on?C.blue:'transparent',color:on?'#fff':C.textSec,fontSize:11.5,fontWeight:on?600:400,cursor:'pointer',transition:'all .13s',whiteSpace:'nowrap'}}>
+                  {v}
+                </button>
+              );
+            })}
+          </div>
+          {hasFilters&&(
+            <button onClick={resetFilters} style={{height:26,padding:'0 10px',borderRadius:20,border:`1px solid ${C.border}`,background:'none',color:C.danger,fontSize:11.5,cursor:'pointer',display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
+              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Reset
+            </button>
           )}
         </div>
 
         {/* Table card */}
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,overflow:'hidden'}}>
 
-          {/* Table top bar */}
-          {/* <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:`1px solid ${C.border}`}}>
+          {/* Top bar: count + filters + view toggle */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:`1px solid ${C.border}`,gap:8,flexWrap:'wrap'}}>
             <div style={{fontSize:12.5,color:C.textMut}}>
               {loading?'Loading…':<>
-                <span> dataset{filtered.length!==1?'s':''}</span>
+                Showing <span style={{fontWeight:600,color:C.text}}>{filtered.length}</span> dataset{filtered.length!==1?'s':''}
                 {enriching&&<span style={{marginLeft:6,fontSize:10.5,color:C.textFaint}}>· loading counts…</span>}
               </>}
             </div>
-          </div> */}
-
-          {/* Table */}
-          <div style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
-            <table style={{width:'100%',borderCollapse:'collapse',minWidth:isMobile?360:860}}>
-              <thead>
-                <tr style={{background:C.hdr}}>
-                  {visibleCols.map(col=>(
-                    <th key={col.key} onClick={col.noSort?undefined:()=>handleSort(col.key)} style={{padding:'9px 12px',textAlign:'left',fontSize:10.5,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:sortCol===col.key?C.blue:C.textMut,borderBottom:`1px solid ${C.border}`,cursor:col.noSort?'default':'pointer',whiteSpace:'nowrap',userSelect:'none',transition:'color .13s',width:col.w||'auto'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:4}}>
-                        {col.label}
-                        {!col.noSort&&<SortIcon active={sortCol===col.key} dir={sortDir}/>}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {loading
-                  ?[...Array(isMobile?5:8)].map((_,i)=><SkeletonRow key={i}/>)
-                  :error
-                  ?<tr><td colSpan={visibleCols.length} style={{padding:'40px 16px',textAlign:'center'}}>
-                    <div style={{fontSize:13,fontWeight:600,color:C.danger,marginBottom:6}}>Failed to load</div>
-                    <div style={{fontSize:11.5,color:C.textMut,marginBottom:12}}>{error}</div>
-                    <button onClick={loadData} style={{padding:'6px 14px',borderRadius:8,background:C.blue,color:'#fff',border:'none',fontSize:12,fontWeight:600,cursor:'pointer'}}>Retry</button>
-                  </td></tr>
-                  :filtered.length===0
-                  ?<tr><td colSpan={visibleCols.length}>
-                    <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'48px 16px',gap:10}}>
-                      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke={C.borderStr} strokeWidth="1.2" strokeLinecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
-                      <div style={{fontSize:14,fontWeight:700,color:C.textSec}}>No datasets found</div>
-                      <div style={{fontSize:12.5,color:C.textMut,textAlign:'center',maxWidth:280}}>Try adjusting your filters or search query.</div>
-                      {hasFilters&&<button onClick={resetFilters} style={{marginTop:4,padding:'6px 16px',borderRadius:8,background:C.blue,color:'#fff',border:'none',fontSize:12,fontWeight:600,cursor:'pointer'}}>Reset Filters</button>}
-                    </div>
-                  </td></tr>
-                  :paginated.map(d=>(
-                    <TableRow
-                      key={d.id} d={d}
-                      isFav={favorites.has(d.sourceId)}
-                      onFav={toggleFav}
-                      onPreview={setPreview}
-                      isDark={isDark}
-                    />
-                  ))
-                }
-              </tbody>
-            </table>
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{height:28,padding:'0 22px 0 9px',borderRadius:7,border:`1px solid ${C.border}`,background:C.card,color:C.textSec,fontSize:11.5,fontFamily:'inherit',cursor:'pointer',outline:'none',appearance:'none',backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,backgroundRepeat:'no-repeat',backgroundPosition:'right 6px center'}}>
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <div style={{display:'flex',gap:4}}>
+                {[
+                  {m:'table',icon:<><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>},
+                  {m:'grid', icon:<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>},
+                ].map(({m,icon})=>(
+                  <button key={m} onClick={()=>setViewMode(m)} title={m==='table'?'Table view':'Grid view'} style={{width:28,height:28,borderRadius:7,border:`1px solid ${viewMode===m?C.blue:C.border}`,background:viewMode===m?C.blueLt:C.card,color:viewMode===m?C.blue:C.textFaint,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'all .13s'}}>
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">{icon}</svg>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
+
+          {/* Grid view */}
+          {viewMode==='grid'&&(
+            <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':isTablet?'repeat(2,1fr)':'repeat(3,1fr)',gap:12,padding:14}}>
+              {loading
+                ?[...Array(isMobile?4:9)].map((_,i)=><SkeletonGridCard key={i}/>)
+                :error
+                ?<div style={{gridColumn:'1/-1',padding:'40px 16px',textAlign:'center'}}>
+                  <div style={{fontSize:13,fontWeight:600,color:C.danger,marginBottom:6}}>Failed to load</div>
+                  <div style={{fontSize:11.5,color:C.textMut,marginBottom:12}}>{error}</div>
+                  <button onClick={loadData} style={{padding:'6px 14px',borderRadius:8,background:C.blue,color:'#fff',border:'none',fontSize:12,fontWeight:600,cursor:'pointer'}}>Retry</button>
+                </div>
+                :filtered.length===0
+                ?<div style={{gridColumn:'1/-1',display:'flex',flexDirection:'column',alignItems:'center',padding:'48px 16px',gap:10}}>
+                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke={C.borderStr} strokeWidth="1.2" strokeLinecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+                  <div style={{fontSize:14,fontWeight:700,color:C.textSec}}>No datasets found</div>
+                  <div style={{fontSize:12.5,color:C.textMut,textAlign:'center',maxWidth:280}}>Try adjusting your filters or search query.</div>
+                  {hasFilters&&<button onClick={resetFilters} style={{marginTop:4,padding:'6px 16px',borderRadius:8,background:C.blue,color:'#fff',border:'none',fontSize:12,fontWeight:600,cursor:'pointer'}}>Reset Filters</button>}
+                </div>
+                :paginated.map(d=>(
+                  <GridCard key={d.id} d={d} isFav={favorites.has(d.sourceId)} onFav={toggleFav} onPreview={setPreview} isDark={isDark}/>
+                ))
+              }
+            </div>
+          )}
+
+          {/* Table view */}
+          {viewMode==='table'&&(
+            <div style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',minWidth:isMobile?360:860}}>
+                <thead>
+                  <tr style={{background:C.hdr}}>
+                    {visibleCols.map(col=>(
+                      <th key={col.key} onClick={col.noSort?undefined:()=>handleSort(col.key)} style={{padding:'9px 12px',textAlign:'left',fontSize:10.5,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:sortCol===col.key?C.blue:C.textMut,borderBottom:`1px solid ${C.border}`,cursor:col.noSort?'default':'pointer',whiteSpace:'nowrap',userSelect:'none',transition:'color .13s',width:col.w||'auto'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:4}}>
+                          {col.label}
+                          {!col.noSort&&<SortIcon active={sortCol===col.key} dir={sortDir}/>}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading
+                    ?[...Array(isMobile?5:8)].map((_,i)=><SkeletonRow key={i}/>)
+                    :error
+                    ?<tr><td colSpan={visibleCols.length} style={{padding:'40px 16px',textAlign:'center'}}>
+                      <div style={{fontSize:13,fontWeight:600,color:C.danger,marginBottom:6}}>Failed to load</div>
+                      <div style={{fontSize:11.5,color:C.textMut,marginBottom:12}}>{error}</div>
+                      <button onClick={loadData} style={{padding:'6px 14px',borderRadius:8,background:C.blue,color:'#fff',border:'none',fontSize:12,fontWeight:600,cursor:'pointer'}}>Retry</button>
+                    </td></tr>
+                    :filtered.length===0
+                    ?<tr><td colSpan={visibleCols.length}>
+                      <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'48px 16px',gap:10}}>
+                        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke={C.borderStr} strokeWidth="1.2" strokeLinecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+                        <div style={{fontSize:14,fontWeight:700,color:C.textSec}}>No datasets found</div>
+                        <div style={{fontSize:12.5,color:C.textMut,textAlign:'center',maxWidth:280}}>Try adjusting your filters or search query.</div>
+                        {hasFilters&&<button onClick={resetFilters} style={{marginTop:4,padding:'6px 16px',borderRadius:8,background:C.blue,color:'#fff',border:'none',fontSize:12,fontWeight:600,cursor:'pointer'}}>Reset Filters</button>}
+                      </div>
+                    </td></tr>
+                    :paginated.map(d=>(
+                      <TableRow
+                        key={d.id} d={d}
+                        isFav={favorites.has(d.sourceId)}
+                        onFav={toggleFav}
+                        onPreview={setPreview}
+                        isDark={isDark}
+                      />
+                    ))
+                  }
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Pagination */}
           {!loading&&!error&&filtered.length>PAGE_SIZE&&(
