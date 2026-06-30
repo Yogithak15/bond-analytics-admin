@@ -187,18 +187,18 @@ function StatCard({ icon, title, value, desc, accent, loading, enriching, isMobi
   return(
     <div onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{
       background:C.card,border:`1px solid ${hov?C.borderStr:C.border}`,
-      borderRadius:10,padding:isMobile?'14px 16px':'16px 18px',
-      display:'flex',alignItems:'center',gap:14,
+      borderRadius:10,padding:isMobile?'10px 14px':'12px 16px',
+      display:'flex',alignItems:'center',gap:12,
       transform:hov?'translateY(-2px)':'translateY(0)',
       transition:'all .18s ease',
     }}>
-      <div style={{width:44,height:44,borderRadius:10,background:a.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={a.ic} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
+      <div style={{width:36,height:36,borderRadius:8,background:a.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke={a.ic} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
       </div>
       <div style={{minWidth:0}}>
         {loading
           ?<div style={{height:28,width:60,background:'#F3F4F6',borderRadius:5,marginBottom:4}}/>
-          :<div style={{fontSize:isMobile?22:28,fontWeight:700,color:C.text,lineHeight:1,fontVariantNumeric:'tabular-nums',letterSpacing:'-0.5px'}}>
+          :<div style={{fontSize:isMobile?20:24,fontWeight:700,color:C.text,lineHeight:1,fontVariantNumeric:'tabular-nums',letterSpacing:'-0.5px'}}>
             {typeof value==='number'?value.toLocaleString('en-IN'):value}
             {enriching&&<span style={{fontSize:10,color:C.textFaint,marginLeft:4,fontWeight:400}}>…</span>}
           </div>
@@ -326,13 +326,13 @@ function TableRow({d,isFav,onFav,onPreview,isDark}){
   const fs=FREQ[d.freq]||FREQ.weekly;
   return(
     <tr onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)} style={{background:hov?C.hoverRow:C.card,transition:'background .1s',borderBottom:`1px solid ${C.border}`}}>
-      <td style={{padding:'10px 12px',maxWidth:220}}>
+      <td style={{padding:'10px 12px',width:300,maxWidth:300}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <div style={{minWidth:0}}>
-            <div onClick={()=>onPreview(d)} title={d.title} style={{fontSize:13,fontWeight:600,color:hov?C.blue:C.text,cursor:'pointer',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:190,transition:'color .12s'}}>
+          <div style={{minWidth:0,overflow:'hidden'}}>
+            <div onClick={()=>onPreview(d)} title={d.title} style={{fontSize:13,fontWeight:600,color:hov?C.blue:C.text,cursor:'pointer',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',transition:'color .12s'}}>
               {d.title}
             </div>
-            <div title={d.id} style={{fontSize:10,color:C.textFaint,fontFamily:'monospace',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:190}}>
+            <div title={d.id} style={{fontSize:10,color:C.textFaint,fontFamily:'monospace',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
               {d.id}
             </div>
           </div>
@@ -581,7 +581,7 @@ export default function CatalogPage({isActive}){
 
 
   const COLS=[
-    {key:'name',   label:'Dataset',      w:'auto'},
+    {key:'name',   label:'Dataset',      w:300},
     {key:'src',    label:'Source',       w:90},
     {key:'freq',   label:'Frequency',    w:100},
     {key:'metrics',label:'Metrics',      w:90},
@@ -625,7 +625,7 @@ export default function CatalogPage({isActive}){
 
         {/* Search + Freq + Status row */}
         <div style={{display:'flex',gap:8,marginBottom:10,alignItems:'center',flexWrap:'wrap'}}>
-          <div style={{position:'relative',flex:1,minWidth:160,maxWidth:420}}>
+          <div style={{position:'relative',flex:1,minWidth:160,maxWidth:560}}>
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke={C.textFaint} strokeWidth="2" strokeLinecap="round" style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}>
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
@@ -650,11 +650,21 @@ export default function CatalogPage({isActive}){
             <option value="inactive">Inactive</option>
           </select>
           {hasFilters&&(
-            <button onClick={resetFilters} style={{height:34,padding:'0 12px',borderRadius:8,border:'none',background:'var(--red)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
+            <button onClick={resetFilters} style={{height:34,padding:'0 12px',borderRadius:8,border:'none',background:'var(--red)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap',lineHeight:1,boxSizing:'border-box',verticalAlign:'middle'}}>
               <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               Reset
             </button>
           )}
+          <div style={{display:'flex',gap:4}}>
+            {[
+              {m:'table',icon:<><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>},
+              {m:'grid', icon:<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>},
+            ].map(({m,icon})=>(
+              <button key={m} onClick={()=>setViewMode(m)} title={m==='table'?'Table view':'Grid view'} style={{width:34,height:34,borderRadius:8,border:`1.5px solid ${viewMode===m?C.blue:C.border}`,background:viewMode===m?C.blueLt:C.card,color:viewMode===m?C.blue:C.textFaint,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'all .13s',boxSizing:'border-box'}}>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">{icon}</svg>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Source pill chips */}
@@ -672,28 +682,6 @@ export default function CatalogPage({isActive}){
 
         {/* Table card */}
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,overflow:'hidden'}}>
-
-          {/* Top bar: count + filters + view toggle */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:`1px solid ${C.border}`,gap:8,flexWrap:'wrap'}}>
-            <div style={{fontSize:12.5,color:C.textMut}}>
-              {loading?'Loading…':<>
-                Showing <span style={{fontWeight:600,color:C.text}}>{filtered.length}</span> dataset{filtered.length!==1?'s':''}
-                {enriching&&<span style={{marginLeft:6,fontSize:10.5,color:C.textFaint}}>· loading counts…</span>}
-              </>}
-            </div>
-            <div style={{display:'flex',gap:8,alignItems:'center'}}>
-              <div style={{display:'flex',gap:4}}>
-                {[
-                  {m:'table',icon:<><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>},
-                  {m:'grid', icon:<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>},
-                ].map(({m,icon})=>(
-                  <button key={m} onClick={()=>setViewMode(m)} title={m==='table'?'Table view':'Grid view'} style={{width:28,height:28,borderRadius:7,border:`1px solid ${viewMode===m?C.blue:C.border}`,background:viewMode===m?C.blueLt:C.card,color:viewMode===m?C.blue:C.textFaint,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'all .13s'}}>
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">{icon}</svg>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
 
           {/* Grid view */}
           {viewMode==='grid'&&(
