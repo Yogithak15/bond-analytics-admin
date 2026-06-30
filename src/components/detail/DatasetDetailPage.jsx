@@ -937,36 +937,50 @@ export default function DatasetDetailPage({ isActive }) {
               <div className="results-head">
                 <div className="results-title">Results</div>
                 <div className="results-cnt">{isMultiSeries ? flatMultiRows.length : results.length} total rows</div>
-                <div className="results-pg" style={{ marginLeft: 'auto' }}>Page 1 of 1</div>
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {metricName && (
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 6, background: 'rgba(37,87,167,.08)', color: 'var(--blue)', border: '1px solid rgba(37,87,167,.18)' }}>
+                      {metricName}
+                    </span>
+                  )}
+                  {dateAttrName && (
+                    <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 9px', borderRadius: 6, background: 'var(--sf2)', color: 'var(--tx3)', border: '1px solid var(--bdr)' }}>
+                      {dateAttrName}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="tw" style={{ overflowX: 'auto', width: '100%' }}>
-                <table style={{ width: '100%', minWidth: isMultiSeries ? 700 : 640 }}>
+                <table style={{ width: '100%', minWidth: isMultiSeries ? 500 : 400, tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: isMultiSeries ? '31%' : '47%' }} />
+                    {isMultiSeries && <col style={{ width: '31%' }} />}
+                    <col />
+                  </colgroup>
                   <thead><tr>
-                    <th style={{ width: 32 }}>#</th>
+                    <th>#</th>
                     <th>PERIOD</th>
                     {isMultiSeries && <th>DIMENSION</th>}
                     <th className="R">VALUE {unit === 'amount' && currentScaleObj.suffix ? `(${currentScaleObj.suffix})` : unit ? `(${unit})` : ''}</th>
-                    <th>METRIC</th>
-                    {!isMultiSeries && <th>DATE ATTRIBUTE</th>}
-                    <th>DATASET</th>
                   </tr></thead>
                   <tbody>
                     {analyticsLoading ? (
                       <>
                         {[...Array(5)].map((_, i) => (
                           <tr key={i}>
-                            {[...Array(isMultiSeries ? 6 : 6)].map((__, j) => (
+                            {[...Array(isMultiSeries ? 4 : 3)].map((__, j) => (
                               <td key={j} style={{ padding: '12px 10px' }}>
-                                <span style={{ display:'inline-block', height:11, width: j===0?'20px': j===1?'55px':j===2?'60px':j===3?'100px':j===4?'80px':'90px', borderRadius:3, background:'linear-gradient(90deg,var(--sf2) 25%,var(--sf3) 50%,var(--sf2) 75%)', backgroundSize:'200% 100%', animation:`skel-shimmer 1.4s ${i*0.08}s ease-in-out infinite` }} />
+                                <span style={{ display:'inline-block', height:11, width: j===0?'20px':j===1?'60px':'80px', borderRadius:3, background:'linear-gradient(90deg,var(--sf2) 25%,var(--sf3) 50%,var(--sf2) 75%)', backgroundSize:'200% 100%', animation:`skel-shimmer 1.4s ${i*0.08}s ease-in-out infinite` }} />
                               </td>
                             ))}
                           </tr>
                         ))}
                       </>
                     ) : analyticsError ? (
-                      <tr><td colSpan={isMultiSeries ? 6 : 6} style={{ textAlign: 'center', padding: '20px', color: 'var(--red)', fontSize: 12 }}>{analyticsError}</td></tr>
+                      <tr><td colSpan={isMultiSeries ? 4 : 3} style={{ textAlign: 'center', padding: '20px', color: 'var(--red)', fontSize: 12 }}>{analyticsError}</td></tr>
                     ) : results.length === 0 ? (
-                      <tr><td colSpan={isMultiSeries ? 6 : 6} style={{ textAlign: 'center', padding: '20px', color: 'var(--tx3)', fontSize: 12 }}>No data</td></tr>
+                      <tr><td colSpan={isMultiSeries ? 4 : 3} style={{ textAlign: 'center', padding: '20px', color: 'var(--tx3)', fontSize: 12 }}>No data</td></tr>
                     ) : isMultiSeries
                       ? flatMultiRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((row, i) => {
                           const rowNum = (page - 1) * PAGE_SIZE + i + 1;
@@ -984,8 +998,6 @@ export default function DatasetDetailPage({ isActive }) {
                                 </span>
                               </td>
                               <td className="nb R" style={{ color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
-                              <td className="mt">{row.metric_name || metricName || '—'}</td>
-                              <td className="mt">{row.dataset_name || datasetInfo?.title || '—'}</td>
                             </tr>
                           );
                         })
@@ -997,9 +1009,6 @@ export default function DatasetDetailPage({ isActive }) {
                               <td className="hh">{rowNum}</td>
                               <td><strong>{row.period || row.period_label || '—'}</strong></td>
                               <td className="nb R" style={{ color: 'var(--blue)', fontWeight: 600 }}>{fmtVal(val)}</td>
-                              <td className="mt">{row.metric_name || metricName || '—'}</td>
-                              <td className="mt">{row.date_attribute_type_name || dateAttrName || '—'}</td>
-                              <td className="mt">{row.dataset_name || datasetInfo?.title || '—'}</td>
                             </tr>
                           );
                         })
