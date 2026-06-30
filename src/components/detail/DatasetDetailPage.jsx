@@ -525,19 +525,27 @@ export default function DatasetDetailPage({ isActive }) {
           labels: { color: dark ? '#909090' : '#5a5d54', font: { size: 11 }, boxWidth: 12, padding: 14 },
         },
         tooltip: {
-          backgroundColor: dark ? '#0d0d0d' : '#1a1c18',
-          borderColor: dark ? 'rgba(255,255,255,.12)' : 'rgba(26,28,24,.15)',
-          borderWidth: 1, titleColor: '#888', bodyColor: dark ? '#e8e8e8' : '#1a1c18',
+          backgroundColor: '#1a1c18',
+          borderColor: 'rgba(255,255,255,.10)',
+          borderWidth: 1,
+          titleColor: '#9ca3af',
+          bodyColor: '#e2e8f0',
           bodyFont: { family: "'JetBrains Mono',monospace", size: 11 },
           padding: 10, cornerRadius: 9,
           callbacks: {
+            title: ctx => ctx[0]?.label ? `Period : ${ctx[0].label}` : '',
             label: ctx => {
               const v = ctx.parsed?.y ?? ctx.parsed;
-              const dimPrefix = multi ? `${ctx.dataset.label}: ` : '';
+              if (v === null || v === undefined) return null;
+              let valStr;
               if (unit === 'amount' && currentScaleObj.divisor > 1) {
-                return ` ${dimPrefix}${v.toLocaleString('en-IN', { maximumFractionDigits: 2 })} ${currentScaleObj.suffix}`;
+                valStr = `${v.toLocaleString('en-IN', { maximumFractionDigits: 2 })} ${currentScaleObj.suffix}`;
+              } else {
+                valStr = `${fmt(v, unit)}${unit ? ' ' + unit : ''}`;
               }
-              return ` ${dimPrefix}${fmt(v, unit)} ${unit}`;
+              return multi
+                ? ` ${ctx.dataset.label}  :  ${valStr}`
+                : ` Value : ${valStr}`;
             },
           },
         },
@@ -1141,11 +1149,11 @@ export default function DatasetDetailPage({ isActive }) {
                     {AGGREGATIONS.map(a => <option key={a} value={a}>{a.toUpperCase()}</option>)}
                   </select>
                 </div>
-                {unit && (
+                {/* {unit && (
                   <div style={{ padding: '5px 8px', background: 'var(--sf2)', border: '1px solid var(--bdr)', borderRadius: 6, fontSize: 9.5, color: 'var(--tx3)', whiteSpace: 'nowrap', marginBottom: 1 }}>
                     {unit}
                   </div>
-                )}
+                )} */}
               </div>
 
               <div style={{ height: 1, background: 'var(--bdr)', margin: '14px 0' }} />
@@ -1247,18 +1255,6 @@ export default function DatasetDetailPage({ isActive }) {
                   )}
                 </>
               )}
-
-              <div style={{ height: 1, background: 'var(--bdr)', margin: '14px 0' }} />
-
-              {/* ── CHART TYPE ── */}
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--blue)', marginBottom: 10 }}>Chart Type</div>
-              <div className="ct-row" style={{ gap: 4 }}>
-                {['line', 'area', 'bar'].map(ct => (
-                  <div key={ct} className={`ct-b${chartType === ct ? ' on' : ''}`} style={{ flex: 1, justifyContent: 'center', textAlign: 'center' }} onClick={() => setChartType(ct)}>
-                    {ct.charAt(0).toUpperCase() + ct.slice(1)}
-                  </div>
-                ))}
-              </div>
 
               <div style={{ height: 1, background: 'var(--bdr)', margin: '14px 0' }} />
 
