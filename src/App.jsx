@@ -7,6 +7,8 @@ import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 // import DashboardPage from './components/dashboard/DashboardPage';
 import CatalogPage from './components/catalog/CatalogPage';
+import MetricsExplorerPage from './components/metrics/MetricsExplorerPage';
+import DimensionExplorerPage from './components/dimensions/DimensionExplorerPage';
 // import OverviewPage from './components/overview/OverviewPage';
 // import MarketPulsePage from './components/marketpulse/MarketPulsePage';
 // import DebtMarketsPage from './components/debtmarket/DebtMarketsPage';
@@ -101,7 +103,7 @@ export default function App() {
   // We set both the class AND an inline display style so there is no way for a
   // stale classList mutation to leak through between React renders.
   useLayoutEffect(() => {
-    const PAGES = ['catalog', 'detail'];
+    const PAGES = ['catalog', 'detail', 'metrics', 'dimensions'];
     PAGES.forEach(p => {
       const el = document.getElementById('page-' + p);
       if (!el) return;
@@ -239,8 +241,10 @@ export default function App() {
             {/* {visitedPages.has('macro')     && <MacroIndicatorsPage    isActive={activePage === 'macro'} />} */}
             {/* {visitedPages.has('insights')  && <InsightsPage           isActive={activePage === 'insights'} />} */}
             {/* {visitedPages.has('dash')      && <DashboardPage          isActive={activePage === 'dash'}     />} */}
-            {visitedPages.has('detail')    && <DatasetDetailPage  isActive={activePage === 'detail'}   />}
-            {visitedPages.has('catalog')   && <CatalogPage        isActive={activePage === 'catalog'}  />}
+            {visitedPages.has('detail')    && <DatasetDetailPage    isActive={activePage === 'detail'}   />}
+            {visitedPages.has('catalog')   && <CatalogPage          isActive={activePage === 'catalog'}  />}
+            {visitedPages.has('metrics')    && <MetricsExplorerPage    isActive={activePage === 'metrics'}     />}
+            {visitedPages.has('dimensions') && <DimensionExplorerPage  isActive={activePage === 'dimensions'}  />}
           </div>
         </div>
         {/* <FiltersPanel /> */}
